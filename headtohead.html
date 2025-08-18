@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tennis Elo — Head‑to‑Head</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="assets/app.js" type="module" defer></script>
+</head>
+<body data-page="h2h">
+  <header class="site-header">
+    <a class="brand" href="index.html"> Home Page </a>
+    <nav class="nav">
+      <a href="rankings.html">Rankings</a>
+      <a aria-current="page" href="headtohead.html">Head‑to‑Head</a>
+      <a href="comparisons.html">Comparisons</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1 class="h1">Head‑to‑Head</h1>
+    <form id="h2h-form" class="filters" aria-label="Head to head form">
+      <label>Player A
+        <input id="p1" list="players-list" placeholder="e.g. Novak Djokovic" autocomplete="off" />
+      </label>
+      <label>Player B
+        <input id="p2" list="players-list" placeholder="e.g. Rafael Nadal" autocomplete="off" />
+      </label>
+      <button class="btn" type="submit">Predict</button>
+      <datalist id="players-list"></datalist>
+    </form>
+
+    <section class="grid two">
+      <div class="card">
+        <h2 class="h2">Win probability</h2>
+        <div class="prob">
+          <div>
+            <strong id="p1-name">Player A</strong>
+            <div id="p1-prob" class="prob-num">—</div>
+          </div>
+          <div>
+            <strong id="p2-name">Player B</strong>
+            <div id="p2-prob" class="prob-num">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="h2">Elo over time</h2>
+        <canvas id="h2hChart" height="240" aria-label="Head to head Elo chart" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Recent meetings</h2>
+      <div id="recent-meetings" class="list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <small> blah blah blah </small>
+  </footer>
+</body>
+</html>
