@@ -3,33 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tennis ELO — Rankings</title>
+  <title>Tennis Elo — Rankings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="assets/app.js" type="module" defer></script>
 </head>
 <body data-page="rankings">
   <header class="site-header">
     <a class="brand" href="homepage.html"> Home </a>
-    <nav class="nav">
-      <a href="rankings.html">Rankings</a>
-      <a aria-current="page" href="headtohead.html">Head‑to‑Head</a>
+    <nav class="nav" aria-label="Primary">
+      <a aria-current="page" href="rankings.html">Rankings</a>
+      <a href="headtohead.html">Head‑to‑Head</a>
       <a href="comparisons.html">Comparisons</a>
     </nav>
   </header>
 
-  <main>
-    <h1>Global Rankings</h1>
-    <p>This is the global rankings page for tennis players.</p>
+  <main class="container center">
+    <section class="hero">
+      <h1 class="h1">Global Rankings</h1>
+      <p class="muted">Explore the current Elo-based player leaderboard. Filter by surface and sort by rating or momentum.</p>
+    </section>
 
-    <section aria-labelledby="filters-heading">
-      <h2 id="filters-heading">Filters</h2>
-      <form>
-        <label>
-          Search player:
+    <section class="card">
+      <form class="filters" aria-label="Ranking filters">
+        <label>Search player
           <input type="search" name="q" placeholder="e.g., Djokovic" />
         </label>
-        <br />
-        <label>
-          Sort:
+        <label>Sort
           <select name="sort">
             <option value="elo_desc">Elo (High → Low)</option>
             <option value="elo_asc">Elo (Low → High)</option>
@@ -37,31 +40,20 @@
             <option value="matches_desc">Matches played (High → Low)</option>
           </select>
         </label>
-        <br />
-        <label>
-          Surface:
-          <select name="surface">
-            <option value="all">All</option>
-            <option value="hard">Hard</option>
-            <option value="clay">Clay</option>
-            <option value="grass">Grass</option>
-          </select>
-        </label>
-        <br />
-        <label>
-          Period:
+        <label>Period
           <select name="period">
             <option value="12m">Last 12 months</option>
             <option value="24m">Last 24 months</option>
-            <option value="all">All-time</option>
+            <option value="all">All‑time</option>
           </select>
         </label>
+        <button class="btn" type="submit">Apply</button>
       </form>
     </section>
 
-    <section aria-labelledby="table-heading">
-      <h2 id="table-heading">Ranking Table (static sample)</h2>
-      <table border="1" cellpadding="6" cellspacing="0">
+    <section class="table-wrap" aria-labelledby="table-heading">
+      <h2 id="table-heading" class="h2">Ranking Table (static sample)</h2>
+      <table class="table" role="table">
         <thead>
           <tr>
             <th scope="col">#</th>
@@ -91,7 +83,7 @@
           </tr>
         </tbody>
       </table>
-      <p><small>Note: This table is static placeholder data for now.</small></p>
+      <p class="muted"><small>Note: This table is static placeholder data for now.</small></p>
     </section>
   </main>
 </body>
