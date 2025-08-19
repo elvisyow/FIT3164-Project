@@ -19,17 +19,30 @@
   </header>
 
   <main class="container center">
-    <h1 class="h1">Head‑to‑Head</h1>
-    <form id="h2h-form" class="filters" aria-label="Head to head form">
-      <label>Player A
-        <input id="p1" list="players-list" placeholder="e.g. Novak Djokovic" autocomplete="off" />
-      </label>
-      <label>Player B
-        <input id="p2" list="players-list" placeholder="e.g. Rafael Nadal" autocomplete="off" />
-      </label>
-      <button class="btn" type="submit">Predict</button>
-      <datalist id="players-list"></datalist>
-    </form>
+    <section class="hero">
+      <h1 class="h1">Head to Head</h1>
+      <p class="muted">Choose two players to match head to head.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h2-players">
+      <h2 id="h2-players" class="h2">Head-to-Head Search</h2>
+      <form class="filters">
+        <label>Player 1
+          <input name="p1" list="players" placeholder="e.g., Rafael Nadal" />
+        </label>
+        <label>Player 2
+          <input name="p2" list="players" placeholder="e.g., Novak Djokovic" />
+        </label>
+        <datalist id="players">
+          <option value="Rafael Nadal"></option>
+          <option value="Novak Djokovic"></option>
+          <option value="Roger Federer"></option>
+          <option value="Jannik Sinner"></option>
+          <option value="Carlos Alcaraz"></option>
+        </datalist>
+        <button class="btn" type="submit">Predict</button>
+      </form>
+    </section>
 
     <section class="grid two">
       <div class="card">
@@ -50,8 +63,6 @@
         <canvas id="h2hChart" height="240" aria-label="Head to head Elo chart" role="img"></canvas>
       </div>
     </section>
-
   </main>
-
 </body>
 </html>
