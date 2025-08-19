@@ -3,51 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tennis ELO — Comparisons</title>
+  <title>Tennis Elo — Comparisons</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="assets/app.js" type="module" defer></script>
 </head>
 <body data-page="comparisons">
   <header class="site-header">
-    <a class="brand" href="homepage.html"> Home Page </a>
-    <nav class="nav">
+    <a class="brand" href="homepage.html"> Home </a>
+    <nav class="nav" aria-label="Primary">
       <a href="rankings.html">Rankings</a>
-      <a aria-current="page" href="headtohead.html">Head‑to‑Head</a>
-      <a href="comparisons.html">Comparisons</a>
+      <a href="headtohead.html">Head‑to‑Head</a>
+      <a aria-current="page" href="comparisons.html">Comparisons</a>
     </nav>
   </header>
 
-  <main>
-    <h1>Player Comparisons</h1>
-    <p>Compare two tennis players statistics</p>
+  <main class="container center">
+    <section class="hero">
+      <h1 class="h1">Player Comparisons</h1>
+      <p class="muted">Choose two players and a period to compare ratings and form side‑by‑side.</p>
+    </section>
 
-    <section aria-labelledby="select-heading">
-      <h2 id="select-heading">Select Players</h2>
-      <form>
-        <label>
-          Player 1:
+    <section class="card" aria-labelledby="select-heading">
+      <h2 id="select-heading" class="h2">Select Players</h2>
+      <form class="filters">
+        <label>Player 1
           <input name="p1" list="players" placeholder="e.g., Rafael Nadal" />
         </label>
-        <br />
-        <label>
-          Player 2:
+        <label>Player 2
           <input name="p2" list="players" placeholder="e.g., Novak Djokovic" />
         </label>
-        <br />
-        <label>
-          Surface:
-          <select name="surface">
-            <option value="all">All</option>
-            <option value="hard">Hard</option>
-            <option value="clay">Clay</option>
-            <option value="grass">Grass</option>
-          </select>
-        </label>
-        <br />
-        <label>
-          Period:
+        <label>Period
           <select name="period">
             <option value="24m">Last 24 months</option>
             <option value="60m">Last 60 months</option>
-            <option value="all">All-time</option>
+            <option value="all">All‑time</option>
           </select>
         </label>
         <datalist id="players">
@@ -57,29 +50,22 @@
           <option value="Jannik Sinner"></option>
           <option value="Carlos Alcaraz"></option>
         </datalist>
+        <button class="btn" type="submit">Compare</button>
       </form>
     </section>
 
-    <section aria-labelledby="h2h-heading">
-      <h2 id="h2h-heading">Statistics</h2>
-      <p><strong>Overall Statistics:</strong> —</p>
-      <p><strong>Current Elo:</strong> —</p>
-    </section>
-
-    <section aria-labelledby="elo-time-heading">
-      <h2 id="elo-time-heading">Elo Over Time</h2>
-      <figure>
-        <img src="assets/placeholders/elo-over-time.png" alt="Placeholder for Elo over time chart" />
-        <figcaption>placeholder — to be replaced with a real chart</figcaption>
-      </figure>
-    </section>
-
-    <section aria-labelledby="surface-breakdown-heading">
-      <h2 id="surface-breakdown-heading">Surface Breakdown</h2>
-      <figure>
-        <img src="assets/placeholders/surface-breakdown.png" alt="Placeholder for surface breakdown chart" />
-        <figcaption>placeholder — to be replaced with a real chart</figcaption>
-      </figure>
+    <section class="grid two">
+      <div class="card">
+        <h2 class="h2">Summary</h2>
+        <p><strong>Overall Statistics:</strong> —</p>
+        <p><strong>Current Elo:</strong> —</p>
+      </div>
+      <div class="card chart-wrap">
+        <div style="width:100%;max-width:680px;">
+          <h2 class="h2">Elo Over Time</h2>
+          <canvas id="compChart" height="240" aria-label="Comparison Elo chart" role="img"></canvas>
+        </div>
+      </div>
     </section>
   </main>
 </body>
