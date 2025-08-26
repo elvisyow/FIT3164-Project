@@ -4,9 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tennis Elo — Head‑to‑Head</title>
-  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" type="module" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
-  <script src="assets/app.js" type="module" defer></script>
+
 </head>
 <body data-page="h2h">
   <header class="site-header">
@@ -34,11 +35,9 @@
           <input name="p2" list="players" placeholder="e.g., Novak Djokovic" />
         </label>
         <datalist id="players">
-          <option value="Rafael Nadal"></option>
-          <option value="Novak Djokovic"></option>
-          <option value="Roger Federer"></option>
-          <option value="Jannik Sinner"></option>
-          <option value="Carlos Alcaraz"></option>
+          {% for name in players %}
+            <option value="{{ name }}"></option>
+          {% endfor %}
         </datalist>
         <button class="btn" type="submit">Predict</button>
       </form>
