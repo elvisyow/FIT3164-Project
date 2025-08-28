@@ -120,24 +120,25 @@ def record_match_basic(
     else:
         raise ValueError("winner must equal p1 or p2")
 
-def parse_iso_date(s: str) -> Optional[datetime]:
+def parse_date(s: str) -> Optional[datetime]:
     """
-    Parse a date string 'YYYY-MM-DD' to datetime.
-    Returns None if parsing fails or the string is empty.
-
-    Args:
-        s: Date string from CSV (expected ISO format 'YYYY-MM-DD').
-
-    Returns:
-        datetime if parseable; otherwise None.
+    Parse a date string from the CSV. Supports day/month/year (e.g., '5/01/2004').
+    Returns None if parsing fails.
     """
     s = (s or "").strip()
     if not s:
         return None
+    # try dd/mm/yyyy
+    try:
+        return datetime.strptime(s, "%d/%m/%Y")
+    except ValueError:
+        pass
+    # try yyyy-mm-dd (iso)
     try:
         return datetime.fromisoformat(s)
-    except Exception:
-        return None
+    except ValueError:
+        pass
+    return None
 
 def _first_n(iterable: Iterable, n: Optional[int]) -> Iterable:
     """
@@ -184,7 +185,7 @@ def load_csv_basic(path: str, limit_rows: Optional[int] = None) -> None:
                 # Skip malformed rows
                 continue
 
-            date = parse_iso_date(row.get("Date") or "")
+            date = parse_date(row.get("Date") or "")
             tournament = (row.get("Tournament") or "").strip()
             surface = (row.get("Surface") or "").strip()
             rnd = (row.get("Round") or "").strip()
@@ -232,3 +233,80 @@ def test_basic_three_matches() -> None:
     assert players_db["Djokovic"].elo == 500 and players_db["Djokovic"].wins == 1 and players_db["Djokovic"].losses == 1
     assert len(players_db["Nadal"].history) == 2
 
+def export_players_to_csv(path: str = "eerr.csv") -> None:
+    """
+    Export current player snapshots to CSV.
+    Columns: Name, Elo, Wins, Losses, MatchesPlayed
+    """
+    with open(path, mode="w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["Name", "Elo", "Wins", "Losses", "MatchesPlayed"])
+        for p in players_db.values():
+            w.writerow([p.name, p.elo, p.wins, p.losses, p.wins + p.losses])
+    print(f"✅ Exported {len(players_db)} players to {path}")
+
+def resolve_player(name: str) -> Optional[Player]:
+    """
+    Best-effort resolver: exact match first, then case-insensitive,
+    then substring (case-insensitive). Returns the Player or None.
+    """
+    if name in players_db:
+        return players_db[name]
+    lower = name.lower()
+    # case-insensitive exact
+    for k in players_db.keys():
+        if k.lower() == lower:
+            return players_db[k]
+    # substring search
+    for k in players_db.keys():
+        if lower in k.lower():
+            return players_db[k]
+    return None
+
+def export_player_elo_history_to_csv(player_name: str, path: Optional[str] = None,
+                                     include_start_point: bool = True) -> str:
+    """
+    Export (date, elo) timeline for a single player so frontend can plot.
+    - If dates are missing, events carry datetime.min; you may filter those.
+    - include_start_point=True adds an initial row representing the pre-match Elo.
+
+    Columns: Date, Elo
+    """
+    p = resolve_player(player_name)
+    if p is None:
+        raise ValueError(f"Player '{player_name}' not found in players_db.")
+
+    rows: List[List[str]] = []
+    # optional starting anchor at START_ELO (before any matches)
+    if include_start_point:
+        # Use a safe artificial date just before first event if available
+        first_date = p.history[0].date if p.history else datetime.min
+        start_date = (first_date if first_date != datetime.min else datetime(1, 1, 1))
+        rows.append([start_date.date().isoformat(), str(START_ELO)])
+
+    # append each event’s (date, new_elo)
+    for ev in p.history:
+        # if date is datetime.min, write empty to let FE handle as “unknown”
+        date_str = "" if ev.date == datetime.min else ev.date.date().isoformat()
+        rows.append([date_str, str(ev.new_elo)])
+
+    # default filename if not provided
+    if path is None:
+        safe = p.name.replace(" ", "_").replace(".", "")
+        path = f"data19082025_{safe}_elo_history.csv"
+
+    with open(path, mode="w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["Date", "Elo"])
+        w.writerows(rows)
+
+    print(f"✅ Exported Elo history for '{p.name}' with {len(rows)} rows to {path}")
+    return path
+
+
+
+reset_players()
+load_csv_basic("Data/atp_tennis_clean.csv")
+export_players_to_csv("data19082025.csv")
+export_player_elo_history_to_csv("Nadal R.")
+ 
