@@ -1,5 +1,5 @@
 from flask import Flask, redirect, url_for, render_template, request, jsonify
-import Data.hashmap as hashmap
+import src.tennis_elo.hashmap as hashmap
 
 app = Flask(__name__)
 
