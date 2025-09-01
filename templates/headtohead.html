@@ -5,48 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tennis Elo — Head‑to‑Head</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  <script src="{{ url_for('static', filename='app.js') }}" type="module" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
-
 </head>
 <body data-page="h2h">
   <header class="site-header">
-    <a class="brand" href="templates/homepage.html"> Home </a>
+    <a class="brand" href="homepage.html">Home</a>
     <nav class="nav" aria-label="Primary">
-      <a href="templates/rankings.html">Rankings</a>
-      <a aria-current="page" href="templates/headtohead.html">Head‑to‑Head</a>
-      <a href="templates/comparisons.html">Comparisons</a>
+      <a href="rankings.html">Rankings</a>
+      <a aria-current="page" href="headtohead.html">Head‑to‑Head</a>
+      <a href="comparisons.html">Comparisons</a>
     </nav>
   </header>
 
   <main class="container center">
+
+    <!-- Hero Section -->
     <section class="hero">
       <h1 class="h1">Head to Head</h1>
       <p class="muted">Choose two players to match head to head.</p>
     </section>
 
+    <!-- Head-to-Head Search -->
     <section class="card" aria-labelledby="h2-players">
       <h2 id="h2-players" class="h2">Head-to-Head Search</h2>
-      <form class="filters">
+      <form class="filters" id="predict-form" onsubmit="return false;">
         <label>Player 1
-          <input name="p1" list="players" placeholder="e.g., Rafael Nadal" />
+          <input name="p1" list="players" placeholder="e.g., NadalR" />
         </label>
         <label>Player 2
-          <input name="p2" list="players" placeholder="e.g., Novak Djokovic" />
+          <input name="p2" list="players" placeholder="e.g., NovakJ" />
         </label>
         <datalist id="players">
           {% for name in players %}
             <option value="{{ name }}"></option>
           {% endfor %}
         </datalist>
-        <button class="btn" type="submit">Predict</button>
+        <button class="btn" id="load-btn" type="button">Load Player Timeline</button>
       </form>
+
+      <div id="player-timeline-result" style="margin-top: 1rem;">
+        <canvas id="eloChart" height="300"></canvas>
+      </div>
     </section>
 
+    <!-- Win Probability Section (can re-add later if needed) -->
     <section class="card">
       <div class="card">
-        <h2 class="h2">Win probability</h2>
-        <div class="prob">
+        <h2 class="h2">Win Probability</h2>
+        <div class="prob" style="display: flex; justify-content: space-around; margin-top: 1rem;">
           <div>
             <strong id="p1-name">Player A</strong>
             <div id="p1-prob" class="prob-num">—</div>
@@ -56,8 +62,80 @@
             <div id="p2-prob" class="prob-num">—</div>
           </div>
         </div>
+
+        <canvas id="probChart" height="300" style="margin-top: 2rem;"></canvas>
       </div>
     </section>
+
   </main>
+
+  <script>
+let eloChart = null;
+
+document.getElementById("load-btn").addEventListener("click", async () => {
+  const player1 = document.querySelector('input[name="p1"]').value;
+  const player2 = document.querySelector('input[name="p2"]').value;
+
+  if (!player1 || !player2) return alert("Select both players");
+
+  // Fetch timelines for both players
+  const res1 = await fetch(`/api/player_timeline?player=${encodeURIComponent(player1)}`);
+  const data1 = await res1.json();
+  if (data1.error) { alert(data1.error); return; }
+
+  const res2 = await fetch(`/api/player_timeline?player=${encodeURIComponent(player2)}`);
+  const data2 = await res2.json();
+  if (data2.error) { alert(data2.error); return; }
+
+  // Merge all dates to have a consistent x-axis
+  const allDates = Array.from(new Set([...data1.map(d => d.date), ...data2.map(d => d.date)]));
+  allDates.sort(); // ascending order
+
+  // Map Elo values, fill missing with null so chart shows gaps
+  const elos1 = allDates.map(d => {
+    const found = data1.find(p => p.date === d);
+    return found ? found.elo : null;
+  });
+
+  const elos2 = allDates.map(d => {
+    const found = data2.find(p => p.date === d);
+    return found ? found.elo : null;
+  });
+
+  const ctx = document.getElementById('eloChart').getContext('2d');
+  if (eloChart) eloChart.destroy();
+
+  eloChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: allDates,
+      datasets: [
+        {
+          label: player1 + " Elo",
+          data: elos1,
+          borderColor: '#36A2EB',
+          backgroundColor: 'rgba(54,162,235,0.2)',
+          tension: 0.2
+        },
+        {
+          label: player2 + " Elo",
+          data: elos2,
+          borderColor: '#FF6384',
+          backgroundColor: 'rgba(255,99,132,0.2)',
+          tension: 0.2
+        }
+      ]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: false, title: { display: true, text: 'Elo Rating' } },
+        x: { title: { display: true, text: 'Date' } }
+      }
+    }
+  });
+});
+</script>
+
+
 </body>
 </html>

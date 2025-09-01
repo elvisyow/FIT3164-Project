@@ -303,6 +303,27 @@ def export_player_elo_history_to_csv(player_name: str, path: Optional[str] = Non
     print(f"✅ Exported Elo history for '{p.name}' with {len(rows)} rows to {path}")
     return path
 
+def export_player_elo_history_to_dict(player_name: str):
+    """
+    Returns a list of dicts: [{"date": str, "elo": int}, ...] for frontend plotting.
+    """
+    p = resolve_player(player_name)
+    if p is None:
+        raise ValueError(f"Player '{player_name}' not found")
+
+    rows = []
+    if p.history:
+        first_date = p.history[0].date if p.history[0].date != datetime.min else None
+        if first_date:
+            rows.append({"date": first_date.date().isoformat(), "elo": START_ELO})
+
+    for ev in p.history:
+        date_str = "" if ev.date == datetime.min else ev.date.date().isoformat()
+        rows.append({"date": date_str, "elo": ev.new_elo})
+
+    return rows
+
+
 
 
 # reset_players()
