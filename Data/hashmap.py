@@ -305,8 +305,8 @@ def export_player_elo_history_to_csv(player_name: str, path: Optional[str] = Non
 
 
 
-reset_players()
-load_csv_basic("Data/atp_tennis_clean.csv")
-export_players_to_csv("data19082025.csv")
-export_player_elo_history_to_csv("Nadal R.")
+# reset_players()
+# load_csv_basic("Data/atp_tennis_clean.csv")
+# export_players_to_csv("data19082025.csv")
+# export_player_elo_history_to_csv("Nadal R.")
  
