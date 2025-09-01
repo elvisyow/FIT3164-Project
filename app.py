@@ -4,7 +4,7 @@ import Data.hashmap as hashmap
 app = Flask(__name__)
 
 # Load CSV data
-hashmap.load_csv_basic("Data/updated_names.csv")
+hashmap.load_csv_basic("Data/atp_tennis_clean.csv")
 
 
 # Route to list top 10 players on homepage
@@ -16,7 +16,7 @@ def players():
 
 
 # API endpoint to get a player's Elo history
-@app.route('/api/player_timeline')
+@app.route('/get_elo_history')
 def player_timeline():
     player_name = request.args.get("player")
     if not player_name:

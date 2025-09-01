@@ -79,11 +79,11 @@ document.getElementById("load-btn").addEventListener("click", async () => {
   if (!player1 || !player2) return alert("Select both players");
 
   // Fetch timelines for both players
-  const res1 = await fetch(`/api/player_timeline?player=${encodeURIComponent(player1)}`);
+  const res1 = await fetch(`/get_elo_history?player=${encodeURIComponent(player1)}`);
   const data1 = await res1.json();
   if (data1.error) { alert(data1.error); return; }
 
-  const res2 = await fetch(`/api/player_timeline?player=${encodeURIComponent(player2)}`);
+  const res2 = await fetch(`/get_elo_history?player=${encodeURIComponent(player2)}`);
   const data2 = await res2.json();
   if (data2.error) { alert(data2.error); return; }
 
