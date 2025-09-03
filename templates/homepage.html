@@ -7,16 +7,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../static/styles.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
 </head>
 <body data-page="home">
   <header class="site-header">
-    <a class="brand" href="templates/homepage.html"> Home </a>
-    <nav aria-label="Primary" class="nav">
-      <a href="templates/rankings.html">Rankings</a>
-      <a href="templates/headtohead.html">Head‑to‑Head</a>
-      <a href="templates/comparisons.html">Comparisons</a>
+    <a class="brand" href="{{ url_for('home') }}">Home</a>
+    <nav class="nav" aria-label="Primary">
+      <a href="{{ url_for('rankings') }}">Rankings</a>
+      <a href="{{ url_for('headtohead') }}">Head-to-Head</a>
+      <a href="{{ url_for('comparisons') }}">Comparisons</a>
     </nav>
   </header>
 

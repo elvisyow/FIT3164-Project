@@ -7,12 +7,30 @@ app = Flask(__name__)
 hashmap.load_csv_basic("Data/atp_tennis_clean.csv")
 
 
-# Route to list top 10 players on homepage
-@app.route('/')
-def players():
-    top10 = hashmap.top_n(10)  # returns list of player objects
+# Homepage
+@app.route("/")
+def home():
+    return render_template("homepage.html")
+
+
+# Rankings page
+@app.route("/rankings")
+def rankings():
+    return render_template("rankings.html")
+
+
+# Head-to-Head page
+@app.route("/headtohead")
+def headtohead():
+    top10 = hashmap.top_n(10)  # keep your logic here
     names = [p.name for p in top10]
     return render_template("headtohead.html", players=names)
+
+
+# Comparisons page
+@app.route("/comparisons")
+def comparisons():
+    return render_template("comparisons.html")
 
 
 # API endpoint to get a player's Elo history
