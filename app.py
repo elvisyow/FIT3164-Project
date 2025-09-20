@@ -4,7 +4,7 @@ import Data.hashmap as hashmap
 app = Flask(__name__)
 
 # Load CSV data
-hashmap.load_csv_basic("Data/atp_tennis_clean.csv")
+hashmap.load_csv_elo("Data/atp_tennis_clean.csv")
 
 
 # Homepage

@@ -8,6 +8,9 @@ START_ELO = 500
 WIN_POINTS = 5
 LOSS_POINTS = -5
 
+K_DEFAULT = 32.0        
+ELO_SCALE = 400.0    
+
 # ---------- Data model ----------
 
 @dataclass
@@ -52,6 +55,10 @@ Players = Dict[str, Player]
 players_db: Players = {}
 
 # ---------- Helpers ----------
+
+def expected_score(r_a: float, r_b: float, scale: float = ELO_SCALE) -> float:
+    """Probability Player A beats Player B, from Elo ratings r_a, r_b."""
+    return 1.0 / (1.0 + 10.0 ** ((r_b - r_a) / scale))
 
 def ensure_player(name: str) -> Player:
     """
@@ -120,6 +127,50 @@ def record_match_basic(
     else:
         raise ValueError("winner must equal p1 or p2")
 
+def record_match_elo(
+    p1: str,
+    p2: str,
+    winner: str,
+    date: Optional[datetime] = None,
+    tournament: str = "",
+    surface: str = "",
+    rnd: str = "",
+    K: float = K_DEFAULT,
+    scale: float = ELO_SCALE
+) -> None:
+    """
+    Proper Elo update:
+      R_new = R_old + K * (S - E)
+    S = 1 if win, 0 if loss. E = expected_score.
+    """
+    p1 = p1.strip(); p2 = p2.strip(); winner = winner.strip()
+    a = ensure_player(p1); b = ensure_player(p2)
+    safe_date = date or datetime.min
+
+    Ea = expected_score(a.elo, b.elo, scale)
+    Eb = 1.0 - Ea
+
+    if winner == p1:
+        Sa, Sb = 1.0, 0.0
+    elif winner == p2:
+        Sa, Sb = 0.0, 1.0
+    else:
+        raise ValueError("winner must equal p1 or p2")
+
+    delta_a = K * (Sa - Ea)
+    delta_b = K * (Sb - Eb)
+
+    a.elo += delta_a; b.elo += delta_b
+    if Sa == 1.0:
+        a.wins += 1; b.losses += 1
+        a.history.append(RatingEvent(safe_date, b.name, "W", int(round(delta_a)), int(round(a.elo)), (tournament, surface, rnd)))
+        b.history.append(RatingEvent(safe_date, a.name, "L", int(round(delta_b)), int(round(b.elo)), (tournament, surface, rnd)))
+    else:
+        b.wins += 1; a.losses += 1
+        b.history.append(RatingEvent(safe_date, a.name, "W", int(round(delta_b)), int(round(b.elo)), (tournament, surface, rnd)))
+        a.history.append(RatingEvent(safe_date, b.name, "L", int(round(delta_a)), int(round(a.elo)), (tournament, surface, rnd)))
+
+
 def parse_date(s: str) -> Optional[datetime]:
     """
     Parse a date string from the CSV. Supports day/month/year (e.g., '5/01/2004').
@@ -139,6 +190,32 @@ def parse_date(s: str) -> Optional[datetime]:
     except ValueError:
         pass
     return None
+
+def parse_iso_date(s: str) -> Optional[datetime]:
+    """
+    Parse a date string from the CSV.
+    Supports 'd/m/Y' (e.g. '5/01/2004') and ISO 'YYYY-MM-DD'.
+    Returns None if parsing fails or string is empty.
+    """
+    s = (s or "").strip()
+    if not s:
+        return None
+    # Try dd/mm/yyyy
+    try:
+        return datetime.strptime(s, "%d/%m/%Y")
+    except ValueError:
+        pass
+    # Try ISO yyyy-mm-dd
+    try:
+        return datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        pass
+    return None
+
+def expected_score(r_a: float, r_b: float, scale: float = ELO_SCALE) -> float:
+    """Probability Player A beats Player B, from Elo ratings r_a, r_b."""
+    return 1.0 / (1.0 + 10.0 ** ((r_b - r_a) / scale))
+
 
 def _first_n(iterable: Iterable, n: Optional[int]) -> Iterable:
     """
@@ -198,6 +275,31 @@ def load_csv_basic(path: str, limit_rows: Optional[int] = None) -> None:
                 surface=surface,
                 rnd=rnd
             )
+
+
+def load_csv_elo(path: str, limit_rows: Optional[int] = None, K: float = K_DEFAULT) -> None:
+    """
+    Same as load_csv_basic but applies proper Elo updates.
+    """
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in _first_n(reader, limit_rows):
+            p1 = (row.get("Player_1") or "").strip()
+            p2 = (row.get("Player_2") or "").strip()
+            winner = (row.get("Winner") or "").strip()
+            if not p1 or not p2 or not winner:
+                continue
+            date = parse_iso_date(row.get("Date") or "")
+            tournament = (row.get("Tournament") or "").strip()
+            surface = (row.get("Surface") or "").strip()
+            rnd = (row.get("Round") or "").strip()
+
+            record_match_elo(
+                p1, p2, winner,
+                date=date, tournament=tournament, surface=surface, rnd=rnd,
+                K=K
+            )
+
 
 # ---------- Utilities & tests ----------
 
