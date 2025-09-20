@@ -2,7 +2,7 @@ import csv
 from typing import Optional, Iterable
 from itertools import islice
 from .parsers import parse_date
-from .rating import record_match_basic, record_match_elo
+from .rating import record_match_elo
 
 def _first_n(iterable: Iterable, n: Optional[int]):
     return iterable if n is None else islice(iterable, n)
