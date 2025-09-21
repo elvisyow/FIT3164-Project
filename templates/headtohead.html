@@ -46,12 +46,20 @@
         <button class="btn" id="load-btn" type="button">Load Player Timeline</button>
       </form>
 
+      <!-- Slider -->
+      <div style="margin-top: 1rem; max-width: 300px; margin-left:auto; margin-right:auto; text-align:center;">
+  <label for="time-slider" style="display:block; margin-bottom:0.3rem;">Timeline Range</label>
+  <input type="range" id="time-slider" min="0" max="100" value="100" style="width:100%;">
+</div>
+
       <div id="player-timeline-result" style="margin-top: 1rem;">
         <canvas id="eloChart" height="300"></canvas>
       </div>
+
+      
     </section>
 
-    <!-- Win Probability Section (can re-add later if needed) -->
+    <!-- Win Probability Section (optional) -->
     <section class="card">
       <div class="card">
         <h2 class="h2">Win Probability</h2>
@@ -72,16 +80,17 @@
 
   </main>
 
-  <script>
+<script>
 let eloChart = null;
+let timelineData1 = [];
+let timelineData2 = [];
+let allDates = [];
 
 document.getElementById("load-btn").addEventListener("click", async () => {
   const player1 = document.querySelector('input[name="p1"]').value;
   const player2 = document.querySelector('input[name="p2"]').value;
-
   if (!player1 || !player2) return alert("Select both players");
 
-  // Fetch timelines for both players
   const res1 = await fetch(`/get_elo_history?player=${encodeURIComponent(player1)}`);
   const data1 = await res1.json();
   if (data1.error) { alert(data1.error); return; }
@@ -90,18 +99,33 @@ document.getElementById("load-btn").addEventListener("click", async () => {
   const data2 = await res2.json();
   if (data2.error) { alert(data2.error); return; }
 
-  // Merge all dates to have a consistent x-axis
-  const allDates = Array.from(new Set([...data1.map(d => d.date), ...data2.map(d => d.date)]));
-  allDates.sort(); // ascending order
+  timelineData1 = data1;
+  timelineData2 = data2;
 
-  // Map Elo values, fill missing with null so chart shows gaps
-  const elos1 = allDates.map(d => {
-    const found = data1.find(p => p.date === d);
+  allDates = Array.from(new Set([...data1.map(d => d.date), ...data2.map(d => d.date)]));
+  allDates.sort();
+
+  updateChart(100); // initial full timeline
+});
+
+// Slider event
+document.getElementById("time-slider").addEventListener("input", (e) => {
+  const percent = e.target.value;
+  updateChart(percent);
+});
+
+function updateChart(percent) {
+  if (!timelineData1.length || !timelineData2.length) return;
+
+  const count = Math.floor(allDates.length * percent / 100);
+  const visibleDates = allDates.slice(-count);
+
+  const elos1 = visibleDates.map(d => {
+    const found = timelineData1.find(p => p.date === d);
     return found ? found.elo : null;
   });
-
-  const elos2 = allDates.map(d => {
-    const found = data2.find(p => p.date === d);
+  const elos2 = visibleDates.map(d => {
+    const found = timelineData2.find(p => p.date === d);
     return found ? found.elo : null;
   });
 
@@ -111,22 +135,10 @@ document.getElementById("load-btn").addEventListener("click", async () => {
   eloChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: allDates,
+      labels: visibleDates,
       datasets: [
-        {
-          label: player1 + " Elo",
-          data: elos1,
-          borderColor: '#36A2EB',
-          backgroundColor: 'rgba(54,162,235,0.2)',
-          tension: 0.2
-        },
-        {
-          label: player2 + " Elo",
-          data: elos2,
-          borderColor: '#FF6384',
-          backgroundColor: 'rgba(255,99,132,0.2)',
-          tension: 0.2
-        }
+        { label: document.querySelector('input[name="p1"]').value + " Elo", data: elos1, borderColor: '#36A2EB', backgroundColor: 'rgba(54,162,235,0.2)', tension: 0.2 },
+        { label: document.querySelector('input[name="p2"]').value + " Elo", data: elos2, borderColor: '#FF6384', backgroundColor: 'rgba(255,99,132,0.2)', tension: 0.2 }
       ]
     },
     options: {
@@ -136,9 +148,8 @@ document.getElementById("load-btn").addEventListener("click", async () => {
       }
     }
   });
-});
+}
 </script>
-
 
 </body>
 </html>
