@@ -48,15 +48,13 @@
 
       <!-- Slider -->
       <div style="margin-top: 1rem; max-width: 300px; margin-left:auto; margin-right:auto; text-align:center;">
-  <label for="time-slider" style="display:block; margin-bottom:0.3rem;">Timeline Range</label>
-  <input type="range" id="time-slider" min="0" max="100" value="100" style="width:100%;">
-</div>
+        <label for="time-slider" style="display:block; margin-bottom:0.3rem;">Timeline Range</label>
+        <input type="range" id="time-slider" min="0" max="100" value="100" style="width:100%;">
+      </div>
 
       <div id="player-timeline-result" style="margin-top: 1rem;">
         <canvas id="eloChart" height="300"></canvas>
       </div>
-
-      
     </section>
 
     <!-- Win Probability Section (optional) -->
@@ -117,8 +115,11 @@ document.getElementById("time-slider").addEventListener("input", (e) => {
 function updateChart(percent) {
   if (!timelineData1.length || !timelineData2.length) return;
 
-  const count = Math.floor(allDates.length * percent / 100);
-  const visibleDates = allDates.slice(-count);
+  // Calculate number of points to show
+  let count = Math.floor(allDates.length * percent / 100);
+
+  // Fix: when slider is 0, show empty chart
+  const visibleDates = count > 0 ? allDates.slice(-count) : [];
 
   const elos1 = visibleDates.map(d => {
     const found = timelineData1.find(p => p.date === d);
