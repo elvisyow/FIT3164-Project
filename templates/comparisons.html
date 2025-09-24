@@ -23,42 +23,46 @@
   <main class="container center">
     <section class="hero">
       <h1 class="h1">Player Comparisons</h1>
-      <p class="muted">Choose two players and a period to compare ratings and form side‑by‑side.</p>
+      <p class="muted">Choose two players and a period to compare Elo trends side-by-side.</p>
     </section>
 
     <section class="card" aria-labelledby="select-heading">
       <h2 id="select-heading" class="h2">Select Players</h2>
-      <form class="filters">
+
+      <form class="filters" id="compare-form">
         <label>Player 1
-          <input name="p1" list="players" placeholder="e.g., Rafael Nadal" />
+          <input name="p1" list="players" placeholder="e.g., NadalR" autocomplete="off" />
         </label>
+
         <label>Player 2
-          <input name="p2" list="players" placeholder="e.g., Novak Djokovic" />
+          <input name="p2" list="players" placeholder="e.g., NovakJ" autocomplete="off" />
         </label>
+
         <label>Period
           <select name="period">
             <option value="24m">Last 24 months</option>
             <option value="60m">Last 60 months</option>
-            <option value="all">All‑time</option>
+            <option value="all">All-time</option>
           </select>
         </label>
+
         <datalist id="players">
-          <option value="Rafael Nadal"></option>
-          <option value="Novak Djokovic"></option>
-          <option value="Roger Federer"></option>
-          <option value="Jannik Sinner"></option>
-          <option value="Carlos Alcaraz"></option>
+          {% for name in players %}
+            <option value="{{ name }}"></option>
+          {% endfor %}
         </datalist>
+
         <button class="btn" type="submit">Compare</button>
       </form>
     </section>
 
     <section class="grid two">
-      <div class="card">
+      <div class="card" id="summary-card">
         <h2 class="h2">Summary</h2>
-        <p><strong>Overall Statistics:</strong> —</p>
-        <p><strong>Current Elo:</strong> —</p>
+        <p id="current-elo"><strong>Current Elo:</strong> —</p>
+        <p id="sample-size"><strong>Sample size:</strong> —</p>
       </div>
+
       <div class="card chart-wrap">
         <div style="width:100%;max-width:680px;">
           <h2 class="h2">Elo Over Time</h2>
@@ -67,5 +71,92 @@
       </div>
     </section>
   </main>
+
+  <script>
+  let compChart = null;
+
+  function cutoffFromPeriod(period) {
+    if (period === 'all') return null;
+    const months = period === '24m' ? 24 : 60;
+    const dt = new Date();
+    dt.setMonth(dt.getMonth() - months);
+    return dt.toISOString().slice(0, 10); 
+  }
+
+  async function getHistory(player) {
+    const res = await fetch(`/get_elo_history?player=${encodeURIComponent(player)}`);
+    const data = await res.json();
+    if (data.error) throw new Error(`${player}: ${data.error}`);
+    return data; 
+  }
+
+  function makeSeries(dates, points) {
+    return dates.map(d => {
+      const item = points.find(p => p.date === d);
+      return item ? item.elo : null;
+    });
+  }
+
+  function drawChart(labels, s1, s2, p1, p2) {
+    const ctx = document.getElementById('compChart').getContext('2d');
+    if (compChart) compChart.destroy();
+    compChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: `${p1} Elo`, data: s1, tension: 0.2 },
+          { label: `${p2} Elo`, data: s2, tension: 0.2 }
+        ]
+      },
+      options: {
+        interaction: { mode: 'nearest', intersect: false },
+        scales: {
+          y: { title: { display: true, text: 'Elo Rating' } },
+          x: { title: { display: true, text: 'Date' } }
+        }
+      }
+    });
+  }
+
+  document.getElementById('compare-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const p1 = document.querySelector('input[name="p1"]').value.trim();
+    const p2 = document.querySelector('input[name="p2"]').value.trim();
+    const period = document.querySelector('select[name="period"]').value;
+
+    if (!p1 || !p2) {
+      alert('Select both players');
+      return;
+    }
+
+    try {
+      const [d1, d2] = await Promise.all([getHistory(p1), getHistory(p2)]);
+
+      const cutoff = cutoffFromPeriod(period);
+      const f1 = cutoff ? d1.filter(pt => pt.date >= cutoff) : d1;
+      const f2 = cutoff ? d2.filter(pt => pt.date >= cutoff) : d2;
+
+      const dates = Array.from(new Set([...f1.map(x => x.date), ...f2.map(x => x.date)])).sort();
+
+      const s1 = makeSeries(dates, f1);
+      const s2 = makeSeries(dates, f2);
+
+      const curr1 = f1.length ? f1[f1.length - 1].elo : '—';
+      const curr2 = f2.length ? f2[f2.length - 1].elo : '—';
+      document.getElementById('current-elo').innerHTML =
+        `<strong>Current Elo:</strong> ${p1} ${curr1} &nbsp;|&nbsp; ${p2} ${curr2}`;
+      document.getElementById('sample-size').innerHTML =
+        `<strong>Sample size:</strong> ${s1.filter(v => v != null).length} vs ${s2.filter(v => v != null).length}`;
+
+      drawChart(dates, s1, s2, p1, p2);
+
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Failed to load player histories');
+    }
+  });
+  </script>
 </body>
 </html>
