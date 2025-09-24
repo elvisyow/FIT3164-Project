@@ -26,34 +26,44 @@
       <p class="muted">Explore player strength, track form over time, and simulate matchups.</p>
     </section>
 
+    <!-- Top 3 Podium -->
     <section class="card center" aria-labelledby="top3-heading">
       <h2 id="top3-heading" class="h2">Top 3 Players (Elo)</h2>
+
+      {% if top3 and top3|length >= 3 %}
       <div class="podium" role="img" aria-label="Top 3 podium">
 
+        <!-- #2 left (silver) -->
         <div class="step silver" style="height:160px">
           <div class="step-inner">
             <div class="rank">#2</div>
-            <div class="name">Carlos Alcaraz</div>
-            <div class="elo">ESP • Elo 2315</div>
+            <div class="name">{{ top3[1].name }}</div>
+            <div class="elo">Elo {{ '%.0f'|format(top3[1].elo) }}</div>
           </div>
         </div>
 
+        <!-- #1 center (gold) -->
         <div class="step gold" style="height:200px">
           <div class="step-inner">
             <div class="rank">#1</div>
-            <div class="name">Novak Djokovic</div>
-            <div class="elo">SRB • Elo 2360</div>
+            <div class="name">{{ top3[0].name }}</div>
+            <div class="elo">Elo {{ '%.0f'|format(top3[0].elo) }}</div>
           </div>
         </div>
 
+        <!-- #3 right (bronze) -->
         <div class="step bronze" style="height:140px">
           <div class="step-inner">
             <div class="rank">#3</div>
-            <div class="name">Jannik Sinner</div>
-            <div class="elo">ITA • Elo 2290</div>
+            <div class="name">{{ top3[2].name }}</div>
+            <div class="elo">Elo {{ '%.0f'|format(top3[2].elo) }}</div>
           </div>
         </div>
+
       </div>
+      {% else %}
+        <p class="muted">Not enough players loaded yet. Check your data import.</p>
+      {% endif %}
 
     </section>
   </main>

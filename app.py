@@ -7,8 +7,11 @@ app = Flask(__name__)
 
 # Homepage
 @app.route("/")
+@app.route("/home")
 def home():
-    return render_template("homepage.html")
+    players = sorted(players_db.values(), key=lambda p: p.elo, reverse=True)
+    top3 = players[:3]
+    return render_template("homepage.html", top3=top3)
 
 @app.route("/rankings")
 def rankings():
