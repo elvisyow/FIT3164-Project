@@ -1,5 +1,5 @@
 from typing import Optional
-from models import RatingEvent, Player, players_db, ensure_player, START_ELO
+from .models import RatingEvent, Player, players_db, ensure_player, START_ELO
 
 # proper Elo
 K_DEFAULT = 32.0
