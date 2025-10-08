@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tennis Elo — Head‑to‑Head</title>
+  <title>Tennis Elo — Head-to-Head</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -57,7 +57,7 @@
       </div>
     </section>
 
-    <!-- Win Probability Section (optional) -->
+    <!-- Win Probability Section -->
     <section class="card">
       <div class="card">
         <h2 class="h2">Win Probability</h2>
@@ -73,6 +73,11 @@
         </div>
 
         <canvas id="probChart" height="300" style="margin-top: 2rem;"></canvas>
+
+        <!-- ADDED: simple text line showing predicted winner -->
+        <p id="prediction-result" style="text-align:center; font-weight:600; font-size:1.1rem; margin-top:1rem;">
+          <!-- Prediction result will appear here -->
+        </p>
       </div>
     </section>
 
@@ -104,6 +109,7 @@ document.getElementById("load-btn").addEventListener("click", async () => {
   allDates.sort();
 
   updateChart(100); // initial full timeline
+  await predictAndRender(player1, player2);
 });
 
 // Slider event
@@ -115,10 +121,7 @@ document.getElementById("time-slider").addEventListener("input", (e) => {
 function updateChart(percent) {
   if (!timelineData1.length || !timelineData2.length) return;
 
-  // Calculate number of points to show
   let count = Math.floor(allDates.length * percent / 100);
-
-  // Fix: when slider is 0, show empty chart
   const visibleDates = count > 0 ? allDates.slice(-count) : [];
 
   const elos1 = visibleDates.map(d => {
@@ -149,6 +152,49 @@ function updateChart(percent) {
       }
     }
   });
+}
+
+async function predictAndRender(p1, p2) {
+  const body = { p1, p2, surface: "", round: "" };
+
+  const res = await fetch("/api/predict", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+
+  // Update labels with Elo ratings
+  document.getElementById("p1-name").textContent = `${data.p1} (Elo ${data.p1_elo})`;
+  document.getElementById("p2-name").textContent = `${data.p2} (Elo ${data.p2_elo})`;
+
+  // Update probability numbers (keep your existing doughnut chart)
+  const p1pct = (data.prob_p1_wins * 100).toFixed(2);
+  const p2pct = (100 - p1pct).toFixed(2);
+  document.getElementById("p1-prob").textContent = `${p1pct}%`;
+  document.getElementById("p2-prob").textContent = `${p2pct}%`;
+
+  const ctx2 = document.getElementById("probChart").getContext("2d");
+  if (window.probChart) window.probChart.destroy();
+  window.probChart = new Chart(ctx2, {
+    type: "doughnut",
+    data: {
+      labels: [data.p1, data.p2],
+      datasets: [{ data: [p1pct, p2pct] }]
+    },
+    options: {
+      plugins: {
+        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}%` } },
+        title: { display: true, text: `Predicted winner: ${data.predicted_winner}` }
+      }
+    }
+  });
+
+  // ADDED: simple confirmation text below the chart
+  document.getElementById("prediction-result").textContent =
+    `Predicted winner: ${data.predicted_winner}`;
+  console.log(`Predicted winner: ${data.predicted_winner}`);
 }
 </script>
 
