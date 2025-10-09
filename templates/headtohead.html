@@ -124,13 +124,28 @@ function updateChart(percent) {
   let count = Math.floor(allDates.length * percent / 100);
   const visibleDates = count > 0 ? allDates.slice(-count) : [];
 
+  // Interpolate missing values by carrying forward the last known ELO
+  let lastElo1 = null;
+  let lastElo2 = null;
+
   const elos1 = visibleDates.map(d => {
     const found = timelineData1.find(p => p.date === d);
-    return found ? found.elo : null;
+    if (found && found.elo !== null && found.elo !== undefined) {
+      lastElo1 = found.elo;
+      return found.elo;
+    }
+    // carry forward last known value
+    return lastElo1;
   });
+
   const elos2 = visibleDates.map(d => {
     const found = timelineData2.find(p => p.date === d);
-    return found ? found.elo : null;
+    if (found && found.elo !== null && found.elo !== undefined) {
+      lastElo2 = found.elo;
+      return found.elo;
+    }
+    // carry forward last known value
+    return lastElo2;
   });
 
   const ctx = document.getElementById('eloChart').getContext('2d');
@@ -153,6 +168,7 @@ function updateChart(percent) {
     }
   });
 }
+
 
 async function predictAndRender(p1, p2) {
   const body = { p1, p2, surface: "", round: "" };
