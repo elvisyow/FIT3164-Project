@@ -90,13 +90,26 @@
     return data; 
   }
 
+  // NEW: carry forward Elo for missing dates (flat line)
   function makeSeries(dates, points) {
-    return dates.map(d => {
+    const series = [];
+    let lastElo = null;
+
+    for (const d of dates) {
       const item = points.find(p => p.date === d);
-      return item ? item.elo : null;
-    });
+      if (item) {
+        lastElo = item.elo;
+        series.push(item.elo);
+      } else {
+        // Keep last Elo value if no match that day
+        series.push(lastElo);
+      }
+    }
+
+    return series;
   }
 
+  // UPDATED: step-like Elo chart (flat between games)
   function drawChart(labels, s1, s2, p1, p2) {
     const ctx = document.getElementById('compChart').getContext('2d');
     if (compChart) compChart.destroy();
@@ -105,8 +118,26 @@
       data: {
         labels,
         datasets: [
-          { label: `${p1} Elo`, data: s1, tension: 0.2 },
-          { label: `${p2} Elo`, data: s2, tension: 0.2 }
+          { 
+            label: `${p1} Elo`, 
+            data: s1,
+            borderWidth: 2,
+            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            stepped: true,
+            tension: 0,
+            fill: false
+          },
+          { 
+            label: `${p2} Elo`, 
+            data: s2,
+            borderWidth: 2,
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            stepped: true,
+            tension: 0,
+            fill: false
+          }
         ]
       },
       options: {
@@ -114,6 +145,9 @@
         scales: {
           y: { title: { display: true, text: 'Elo Rating' } },
           x: { title: { display: true, text: 'Date' } }
+        },
+        plugins: {
+          legend: { position: 'bottom' }
         }
       }
     });
