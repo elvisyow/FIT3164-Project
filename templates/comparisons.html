@@ -90,7 +90,7 @@
     return data; 
   }
 
-  // NEW: carry forward Elo for missing dates (flat line)
+  // Carry forward Elo for missing dates (flat line)
   function makeSeries(dates, points) {
     const series = [];
     let lastElo = null;
@@ -101,7 +101,6 @@
         lastElo = item.elo;
         series.push(item.elo);
       } else {
-        // Keep last Elo value if no match that day
         series.push(lastElo);
       }
     }
@@ -109,7 +108,7 @@
     return series;
   }
 
-  // UPDATED: step-like Elo chart (flat between games)
+  // Step-like Elo chart (flat between games)
   function drawChart(labels, s1, s2, p1, p2) {
     const ctx = document.getElementById('compChart').getContext('2d');
     if (compChart) compChart.destroy();
@@ -122,8 +121,8 @@
             label: `${p1} Elo`, 
             data: s1,
             borderWidth: 2,
-            borderColor: 'rgba(54, 162, 235, 1)',
-            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            borderColor: '#2ecc71',       // Emerald Green
+            backgroundColor: 'rgba(46, 204, 113, 0.1)',
             stepped: true,
             tension: 0,
             fill: false
@@ -132,8 +131,8 @@
             label: `${p2} Elo`, 
             data: s2,
             borderWidth: 2,
-            borderColor: 'rgba(255, 99, 132, 1)',
-            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            borderColor: '#555555',       // Charcoal Gray
+            backgroundColor: 'rgba(85, 85, 85, 0.1)',
             stepped: true,
             tension: 0,
             fill: false
