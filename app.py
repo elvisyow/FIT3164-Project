@@ -44,8 +44,6 @@ def get_live_elo(name: str) -> float:
         return float(player_elos_file[name])
     return START_ELO
 
-
-
 # Homepage
 @app.route("/")
 @app.route("/home")
@@ -81,14 +79,17 @@ def rankings():
 
     return render_template("rankings.html", players=ranked, sort=sort_key)
 
+def all_player_names():
+    return sorted([p.name for p in players_db.values()], key=str.casefold)
+
 @app.route("/headtohead")
 def headtohead():
-    names = [p.name for p in elo.top_n(10)]
+    names = all_player_names()
     return render_template("headtohead.html", players=names)
 
 @app.route("/comparisons")
 def comparisons():
-    names = [p.name for p in elo.top_n(10)]
+    names = all_player_names()
     return render_template("comparisons.html", players=names)
 
 @app.route("/get_elo_history")
