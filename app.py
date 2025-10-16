@@ -147,6 +147,52 @@ def api_predict():
         "prob_p1_wins": round(prob, 4),
         "predicted_winner": predicted
     })
+# === NEW: batch probability over time (ML model) ===
+@app.route("/api/predict_series", methods=["POST"])
+def api_predict_series():
+    """
+    Body:
+    {
+      "points": [
+        {"date":"2024-01-01","elo_diff": 15.2, "surface":"", "round":""},
+        ...
+      ]
+    }
+    Returns: {"probs":[0.6123, 0.5981, ...]}  # P(p1 wins) aligned to input order
+    """
+    data = request.get_json(force=True) or {}
+    points = data.get("points") or []
+    if not isinstance(points, list) or not points:
+        return jsonify({"error": "points[] required"}), 400
+
+    # Elo fallback if model unavailable
+    def elo_expected(a_minus_b, scale=400.0):
+        # a_minus_b == EloA - EloB
+        import math
+        return 1.0 / (1.0 + 10.0 ** (-(a_minus_b)/scale))
+
+    try:
+        import pandas as pd
+        df = pd.DataFrame(points)
+        # normalize columns
+        if "elo_diff" not in df:
+            return jsonify({"error": "each point must include elo_diff"}), 400
+        if "surface" not in df: df["surface"] = ""
+        if "round" not in df:   df["round"] = ""
+
+        if mlp_model is not None:
+            X = df[["elo_diff", "surface", "round"]]
+            probs = mlp_model.predict_proba(X)[:, 1].tolist()
+        else:
+            # fallback: Elo expected using elo_diff (A-B)
+            probs = [float(elo_expected(ed)) for ed in df["elo_diff"].tolist()]
+
+        return jsonify({"probs": [float(round(p, 6)) for p in probs]})
+    except Exception as e:
+        print(f"[WARN] /api/predict_series failed: {e}")
+        # fallback to Elo if something goes wrong
+        probs = [float(elo_expected(p["elo_diff"])) for p in points]
+        return jsonify({"probs": [float(round(p, 6)) for p in probs]})
 
 if __name__ == "__main__":
     elo.reset_players()
