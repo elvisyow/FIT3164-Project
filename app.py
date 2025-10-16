@@ -83,12 +83,14 @@ def rankings():
 
 @app.route("/headtohead")
 def headtohead():
-    names = [p.name for p in elo.top_n(10)]
+    names = [p.name for p in players_db.values()]
+    names.sort()
     return render_template("headtohead.html", players=names)
 
 @app.route("/comparisons")
 def comparisons():
-    names = [p.name for p in elo.top_n(10)]
+    names = [p.name for p in players_db.values()]
+    names.sort()
     return render_template("comparisons.html", players=names)
 
 @app.route("/get_elo_history")
