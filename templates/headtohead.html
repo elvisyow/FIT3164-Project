@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tennis Elo — Head‑to‑Head</title>
+  <title>Tennis Elo — Head-to-Head</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -57,7 +57,7 @@
       </div>
     </section>
 
-    <!-- Win Probability Section (optional) -->
+    <!-- Win Probability Section -->
     <section class="card">
       <div class="card">
         <h2 class="h2">Win Probability</h2>
@@ -73,6 +73,8 @@
         </div>
 
         <canvas id="probChart" height="300" style="margin-top: 2rem;"></canvas>
+
+        <p id="prediction-result" style="text-align:center; font-weight:600; font-size:1.1rem; margin-top:1rem;"></p>
       </div>
     </section>
 
@@ -103,10 +105,10 @@ document.getElementById("load-btn").addEventListener("click", async () => {
   allDates = Array.from(new Set([...data1.map(d => d.date), ...data2.map(d => d.date)]));
   allDates.sort();
 
-  updateChart(100); // initial full timeline
+  updateChart(100);
+  await predictAndRender(player1, player2);
 });
 
-// Slider event
 document.getElementById("time-slider").addEventListener("input", (e) => {
   const percent = e.target.value;
   updateChart(percent);
@@ -115,19 +117,28 @@ document.getElementById("time-slider").addEventListener("input", (e) => {
 function updateChart(percent) {
   if (!timelineData1.length || !timelineData2.length) return;
 
-  // Calculate number of points to show
   let count = Math.floor(allDates.length * percent / 100);
-
-  // Fix: when slider is 0, show empty chart
   const visibleDates = count > 0 ? allDates.slice(-count) : [];
+
+  let lastElo1 = null;
+  let lastElo2 = null;
 
   const elos1 = visibleDates.map(d => {
     const found = timelineData1.find(p => p.date === d);
-    return found ? found.elo : null;
+    if (found && found.elo !== null && found.elo !== undefined) {
+      lastElo1 = found.elo;
+      return found.elo;
+    }
+    return lastElo1;
   });
+
   const elos2 = visibleDates.map(d => {
     const found = timelineData2.find(p => p.date === d);
-    return found ? found.elo : null;
+    if (found && found.elo !== null && found.elo !== undefined) {
+      lastElo2 = found.elo;
+      return found.elo;
+    }
+    return lastElo2;
   });
 
   const ctx = document.getElementById('eloChart').getContext('2d');
@@ -138,8 +149,20 @@ function updateChart(percent) {
     data: {
       labels: visibleDates,
       datasets: [
-        { label: document.querySelector('input[name="p1"]').value + " Elo", data: elos1, borderColor: '#36A2EB', backgroundColor: 'rgba(54,162,235,0.2)', tension: 0.2 },
-        { label: document.querySelector('input[name="p2"]').value + " Elo", data: elos2, borderColor: '#FF6384', backgroundColor: 'rgba(255,99,132,0.2)', tension: 0.2 }
+        { 
+          label: document.querySelector('input[name="p1"]').value + " Elo", 
+          data: elos1, 
+          borderColor: '#2ecc71', 
+          backgroundColor: 'rgba(46, 204, 113, 0.1)', 
+          tension: 0.2 
+        },
+        { 
+          label: document.querySelector('input[name="p2"]').value + " Elo", 
+          data: elos2, 
+          borderColor: '#555555', 
+          backgroundColor: 'rgba(85, 85, 85, 0.1)', 
+          tension: 0.2 
+        }
       ]
     },
     options: {
@@ -149,6 +172,45 @@ function updateChart(percent) {
       }
     }
   });
+}
+
+async function predictAndRender(p1, p2) {
+  const body = { p1, p2, surface: "", round: "" };
+
+  const res = await fetch("/api/predict", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+
+  document.getElementById("p1-name").textContent = `${data.p1} (Elo ${data.p1_elo})`;
+  document.getElementById("p2-name").textContent = `${data.p2} (Elo ${data.p2_elo})`;
+
+  const p1pct = (data.prob_p1_wins * 100).toFixed(2);
+  const p2pct = (100 - p1pct).toFixed(2);
+  document.getElementById("p1-prob").textContent = `${p1pct}%`;
+  document.getElementById("p2-prob").textContent = `${p2pct}%`;
+
+  const ctx2 = document.getElementById("probChart").getContext("2d");
+  if (window.probChart) window.probChart.destroy();
+  window.probChart = new Chart(ctx2, {
+    type: "doughnut",
+    data: {
+      labels: [data.p1, data.p2],
+      datasets: [{ data: [p1pct, p2pct] }]
+    },
+    options: {
+      plugins: {
+        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}%` } },
+        title: { display: true, text: `Predicted winner: ${data.predicted_winner}` }
+      }
+    }
+  });
+
+  document.getElementById("prediction-result").textContent =
+    `Predicted winner: ${data.predicted_winner}`;
 }
 </script>
 

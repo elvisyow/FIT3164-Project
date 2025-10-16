@@ -235,3 +235,15 @@ def metrics_block(y_true, y_proba, y_pred):
     }
 
 print("MLP (Neural Net):   ", metrics_block(y_te, proba_mlp, pred_mlp))
+
+# --- ADD: persist artifacts for the web app ---
+import joblib, json
+
+joblib.dump(mlp, "mlp_model.joblib")
+print("Saved model -> mlp_model.joblib")
+
+# Optional (handy fallback): save latest Elo ratings
+elos = {name: round(p.elo, 3) for name, p in players_db.items()}
+with open("player_elos.json", "w") as f:
+    json.dump(elos, f, indent=2)
+print(f"Saved {len(elos)} elos -> player_elos.json")
