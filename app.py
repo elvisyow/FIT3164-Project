@@ -84,12 +84,14 @@ def all_player_names():
 
 @app.route("/headtohead")
 def headtohead():
-    names = all_player_names()
+    names = [p.name for p in players_db.values()]
+    names.sort()
     return render_template("headtohead.html", players=names)
 
 @app.route("/comparisons")
 def comparisons():
-    names = all_player_names()
+    names = [p.name for p in players_db.values()]
+    names.sort()
     return render_template("comparisons.html", players=names)
 
 @app.route("/get_elo_history")
