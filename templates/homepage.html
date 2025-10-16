@@ -66,6 +66,60 @@
       {% endif %}
 
     </section>
+
+    <section class="card">
+      <h2 class="h2">How Our Elo Works</h2>
+      <p class="muted" style="max-width:800px; margin:0 auto; line-height:1.7; text-align:left;">
+        The Elo system used on this site is a <strong>custom elo rating</strong> to measure the skill level of Tennis players.
+        Every player starts with a <strong>base rating of 500</strong>, representing an average skill level. After each match,
+        both players’ ratings are updated based on who won and who was expected to win.
+      </p>
+
+      <p class="muted" style="max-width:800px; margin:1rem auto 0; line-height:1.7; text-align:left;">
+        The <strong>expected win probability</strong> between Player A and Player B is computed using the Elo formula:
+      </p>
+
+      <pre style="background:#f8fafc; border:1px solid #e6eaf0; border-radius:10px; padding:12px; font-family:monospace; overflow:auto; max-width:800px; margin:0 auto;">
+    E_A = 1 / (1 + 10^((R_B - R_A) / 400))
+      </pre>
+
+      <p class="muted" style="max-width:800px; margin:1rem auto 0; line-height:1.7; text-align:left;">
+        - <code>R_A</code> and <code>R_B</code> are the current ratings of Player A and Player B.<br>
+        - <code>E_A</code> is Player A’s expected probability of winning the match.<br>
+        - The number 400 is the <em>scaling factor</em> that controls rating sensitivity.
+      </p>
+
+      <p class="muted" style="max-width:800px; margin:1rem auto 0; line-height:1.7; text-align:left;">
+        Once the match result is known, the ratings are updated as follows:
+      </p>
+
+      <pre style="background:#f8fafc; border:1px solid #e6eaf0; border-radius:10px; padding:12px; font-family:monospace; overflow:auto; max-width:800px; margin:0 auto;">
+    R'_A = R_A + K × (S_A − E_A)
+    R'_B = R_B + K × (S_B − E_B)
+      </pre>
+
+      <p class="muted" style="max-width:800px; margin:1rem auto 0; line-height:1.7; text-align:left;">
+        - <code>K</code> is the <strong>K-factor</strong>, which controls how much ratings change per match (our model uses K = 32).<br>
+        - <code>S_A</code> is the actual result for Player A (1 for a win, 0 for a loss).<br>
+        - <code>E_A</code> is the expected score from the first formula above.<br>
+        - Both players’ ratings always change in opposite directions, keeping the system zero-sum.
+      </p>
+
+      <p class="muted" style="max-width:800px; margin:1rem auto 0; line-height:1.7; text-align:left;">
+        This ensures that:
+        <ul style="margin-left:2rem; color:#42526e; line-height:1.6;">
+          <li>Beating a higher-rated opponent gives a larger rating boost.</li>
+          <li>Losing to a much lower-rated opponent causes a bigger drop.</li>
+          <li>Over time, players’ Elo values stabilize to reflect their real performance level.</li>
+        </ul>
+      </p>
+
+      <p class="muted" style="max-width:800px; margin:1rem auto 0; line-height:1.7; text-align:left;">
+        The same logic powers our match predictions and historical trend charts. The system can be extended with
+        surface-specific adjustments, tournament weighting, and decay over time to better capture player form.
+      </p>
+    </section>
+    
   </main>
 </body>
 </html>
