@@ -57,30 +57,31 @@
       </div>
     </section>
 
-    <!-- Win Probability Section -->
-    <section class="card">
-      <div class="card">
-        <h2 class="h2">Win Probability</h2>
-        <div class="prob" style="display: flex; justify-content: space-around; margin-top: 1rem;">
-          <div>
-            <strong id="p1-name">Player A</strong>
-            <div id="p1-prob" class="prob-num">—</div>
-          </div>
-          <div>
-            <strong id="p2-name">Player B</strong>
-            <div id="p2-prob" class="prob-num">—</div>
-          </div>
+    <!--Win Probability -->
+    <section class="card" aria-labelledby="winprob-now-heading">
+      <h2 id="winprob-now-heading" class="h2">Win Probability (Current Match)</h2>
+
+      <div class="prob" style="display:flex; justify-content:space-around; margin-top:1rem;">
+        <div>
+          <strong id="p1-name">Player A</strong>
+          <div id="p1-prob" class="prob-num">—</div>
         </div>
-
-        <canvas id="probChart" height="300" style="margin-top: 2rem;"></canvas>
-
-        <p id="prediction-result" style="text-align:center; font-weight:600; font-size:1.1rem; margin-top:1rem;"></p>
-
-        <!-- NEW: ML win-probability over time chart -->
-        <canvas id="probOverTimeChart" height="260" style="margin-top: 1.5rem;"></canvas>
+        <div>
+          <strong id="p2-name">Player B</strong>
+          <div id="p2-prob" class="prob-num">—</div>
+        </div>
       </div>
+
+      <canvas id="probChart" height="300" style="margin-top:2rem;"></canvas>
+
+      <p id="prediction-result" style="text-align:center; font-weight:600; font-size:1.1rem; margin-top:1rem;"></p>
     </section>
 
+    <!-- Win Probability Over Time -->
+    <section class="card" aria-labelledby="winprob-time-heading">
+      <h2 id="winprob-time-heading" class="h2">Win Probability Over Time</h2>
+      <canvas id="probOverTimeChart" height="260"></canvas>
+    </section>
   </main>
 
 <script>
