@@ -75,6 +75,9 @@
         <canvas id="probChart" height="300" style="margin-top: 2rem;"></canvas>
 
         <p id="prediction-result" style="text-align:center; font-weight:600; font-size:1.1rem; margin-top:1rem;"></p>
+
+        <!-- NEW: ML win-probability over time chart -->
+        <canvas id="probOverTimeChart" height="260" style="margin-top: 1.5rem;"></canvas>
       </div>
     </section>
 
@@ -85,6 +88,7 @@ let eloChart = null;
 let timelineData1 = [];
 let timelineData2 = [];
 let allDates = [];
+let probOverTimeChart = null; // NEW
 
 document.getElementById("load-btn").addEventListener("click", async () => {
   const player1 = document.querySelector('input[name="p1"]').value;
@@ -106,12 +110,15 @@ document.getElementById("load-btn").addEventListener("click", async () => {
   allDates.sort();
 
   updateChart(100);
-  await predictAndRender(player1, player2);
+
+  predictAndRender(player1, player2);
+  updateProbOverTimeModel(100);  
 });
 
-document.getElementById("time-slider").addEventListener("input", (e) => {
+document.getElementById("time-slider").addEventListener("input", async (e) => {
   const percent = e.target.value;
   updateChart(percent);
+  updateProbOverTimeModel(percent); 
 });
 
 function updateChart(percent) {
@@ -211,6 +218,89 @@ async function predictAndRender(p1, p2) {
 
   document.getElementById("prediction-result").textContent =
     `Predicted winner: ${data.predicted_winner}`;
+}
+
+async function updateProbOverTimeModel(percent) {
+  if (!timelineData1.length || !timelineData2.length) return;
+
+  // Visible window (same as Elo chart)
+  const count = Math.floor(allDates.length * percent / 100);
+  const visibleDates = count > 0 ? allDates.slice(-count) : [];
+  if (!visibleDates.length) return;
+
+  // Carry-forward Elos, build all points first
+  let lastA = null, lastB = null;
+  const allPoints = [];  // [{date, elo_diff, surface, round}]
+  for (const d of visibleDates) {
+    const a = timelineData1.find(p => p.date === d);
+    const b = timelineData2.find(p => p.date === d);
+
+    if (a && a.elo != null) lastA = Number(a.elo);
+    if (b && b.elo != null) lastB = Number(b.elo);
+
+    if (lastA != null && lastB != null) {
+      allPoints.push({
+        date: d,
+        elo_diff: lastA - lastB,
+        surface: "",   // wire these when you add controls
+        round: ""
+      });
+    }
+  }
+  if (!allPoints.length) {
+    if (probOverTimeChart) { probOverTimeChart.destroy(); probOverTimeChart = null; }
+    return;
+  }
+
+  // Keep only ONE point per year: the last available in that year
+  const byYear = new Map(); // year -> point
+  for (const pt of allPoints) {
+    const yr = new Date(pt.date).getFullYear();
+    byYear.set(yr, pt); // later dates overwrite earlier ones => "last in year"
+  }
+  // Sort by year ascending
+  const years = Array.from(byYear.keys()).sort((a,b)=>a-b);
+  const points = years.map(y => byYear.get(y));
+  if (!points.length) return;
+
+  // Ask the model for probabilities for those yearly points
+  const res = await fetch("/api/predict_series", {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({ points })
+  });
+  if (!res.ok) {
+    console.error("predict_series error", res.status, await res.text());
+    return;
+  }
+
+  const payload = await res.json();
+  const probs = Array.isArray(payload.probs) ? payload.probs : [];
+  if (!probs.length) return;
+
+  // Chart data: show as % and label x-axis with the year
+  const labels   = years.map(String); // ["2016","2017",...]
+  const p1Series = probs.map(p => +(p * 100).toFixed(2));
+  const p2Series = p1Series.map(v => +(100 - v).toFixed(2));
+
+  const ctx = document.getElementById('probOverTimeChart').getContext('2d');
+  if (probOverTimeChart) probOverTimeChart.destroy();
+  probOverTimeChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: document.querySelector('input[name="p1"]').value + " Win %", data: p1Series, tension: 0.2 },
+        { label: document.querySelector('input[name="p2"]').value + " Win %", data: p2Series, tension: 0.2 }
+      ]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 100, title: { display: true, text: 'Win Probability (%) — ML' } },
+        x: { title: { display: true, text: 'Year' } }
+      }
+    }
+  });
 }
 </script>
 
