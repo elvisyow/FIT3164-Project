@@ -190,3 +190,25 @@ canvas{ max-width:100%; height:auto }
 @media (prefers-reduced-motion: reduce){
   *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
 }
+
+/* ================================
+   Sort button
+   ================================ */
+.sort-btn{
+  appearance:none;
+  border:0;
+  background:transparent;
+  font:inherit;
+  color:inherit;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 6px;
+  border-radius:8px;
+}
+.sort-btn:hover{ background:#f3f4f6 }
+.sort-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px }
+.caret{ font-weight:700; opacity:.7 }
+
+#search-form .btn { min-width: 84px; }

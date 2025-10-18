@@ -26,30 +26,43 @@
       <p class="muted">Current Elo-based leaderboard.</p>
     </section>
 
-    <section class="card">
-      <form class="filters" aria-label="Ranking filters" method="get" action="{{ url_for('rankings') }}">
-        <label>Sort
-          <select name="sort">
-            <option value="elo_desc" {{ 'selected' if sort=='elo_desc' else '' }}>Elo (High → Low)</option>
-            <option value="elo_asc"  {{ 'selected' if sort=='elo_asc'  else '' }}>Elo (Low → High)</option>
-            <option value="matches_desc" {{ 'selected' if sort=='matches_desc' else '' }}>Matches played (High → Low)</option>
-          </select>
+    <section class="card" aria-labelledby="search-heading">
+      <h2 id="search-heading" class="h2">Search Player</h2>
+      <form id="search-form" class="filters" onsubmit="return false;">
+        <label>Player
+          <input id="search-player" list="players" placeholder="e.g., Novak Djokovic" autocomplete="off" />
         </label>
-        <button class="btn" type="submit">Apply</button>
+        <datalist id="players"></datalist>
+        <button class="btn" id="search-go" type="button">Find</button>
+        <button class="btn" id="search-clear" type="button" style="background:#e5e7eb;color:#111827;">Clear</button>
       </form>
     </section>
 
     <section class="table-wrap" aria-labelledby="table-heading">
       <h2 id="table-heading" class="h2">Ranking Table</h2>
+
       {% if players and players|length %}
       <table class="table" role="table">
         <thead>
           <tr>
             <th scope="col">#</th>
             <th scope="col">Player</th>
-            <th scope="col">Elo</th>
+            <th scope="col">
+              <button class="sort-btn" data-col="elo" aria-label="Sort by Elo" aria-sort="none">
+                Elo <span class="caret">↕</span>
+              </button>
+            </th>
             <th scope="col">W-L</th>
-            <th scope="col">Matches</th>
+            <th scope="col">
+              <button class="sort-btn" data-col="winpct" aria-label="Sort by Win %" aria-sort="none">
+                Win % <span class="caret">↕</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button class="sort-btn" data-col="matches" aria-label="Sort by Matches" aria-sort="none">
+                Matches <span class="caret">↕</span>
+              </button>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -59,6 +72,12 @@
             <td>{{ p.name }}</td>
             <td>{{ '%.2f'|format(p.elo) }}</td>
             <td>{{ p.wins }}-{{ p.losses }}</td>
+              <td>
+                {% set m = (p.wins or 0) + (p.losses or 0) %}
+                {% if m > 0 %}
+                  {{ '%.1f'|format(100.0 * (p.wins or 0) / m) }}%
+                {% else %}—{% endif %}
+              </td>
             <td>{{ p.matches }}</td>
           </tr>
           {% endfor %}
@@ -69,5 +88,162 @@
       {% endif %}
     </section>
   </main>
+<script>
+(function () {
+  // ----- COL INDEXES -----
+  const IDX = { rank: 0, name: 1, elo: 2, wl: 3, winpct: 4, matches: 5 };
+
+  // ----- ELEMENTS -----
+  const table = document.querySelector('.table');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  const sortBtns = document.querySelectorAll('.sort-btn'); // buttons in <th> for Elo / Win% / Matches
+
+  // Search UI (if present)
+  const searchInput = document.getElementById('search-player');
+  const searchGo = document.getElementById('search-go');
+  const searchClear = document.getElementById('search-clear');
+  const datalist = document.getElementById('players');
+
+  // ----- UTIL -----
+  const cleanNum = (txt) => {
+    const n = parseFloat(String(txt || '').replace(/[,%\s]+/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // Extract win% from W-L cell text "W-L"
+  function winPctFromRow(tr) {
+    const wlText = (tr.children[IDX.wl]?.textContent || '').trim();
+    const m = wlText.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (!m) return 0;
+    const wins = parseInt(m[1], 10), losses = parseInt(m[2], 10);
+    const total = wins + losses;
+    return total > 0 ? (wins / total) * 100 : 0;
+    // NOTE: If you server-render the Win% cell, we still compute from W-L
+    // so it stays correct even if formatting changes.
+  }
+
+  function renumberRanks() {
+    const visibleRows = Array.from(tbody.querySelectorAll('tr'))
+      .filter(tr => tr.style.display !== 'none');
+    visibleRows.forEach((tr, i) => {
+      const cell = tr.children[IDX.rank];
+      if (cell) cell.textContent = String(i + 1);
+    });
+  }
+
+  function resetOtherSorts(exceptKey) {
+    sortBtns.forEach(btn => {
+      const key = btn.dataset.col; // "elo" | "winpct" | "matches"
+      if (key !== exceptKey) {
+        btn.setAttribute('aria-sort', 'none');
+        const caret = btn.querySelector('.caret');
+        if (caret) caret.textContent = '↕';
+        btn.dataset.dir = ''; // clear saved dir
+      }
+    });
+  }
+
+  // ----- SORTING -----
+  function sortBy(key) {
+    // key: "elo" | "winpct" | "matches"
+    const btn = document.querySelector(`.sort-btn[data-col="${key}"]`);
+    if (!btn) return;
+
+    // Toggle direction
+    const current = btn.dataset.dir === 'asc' ? 'desc' : 'asc';
+    btn.dataset.dir = current;
+    resetOtherSorts(key);
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+      let va, vb;
+      if (key === 'winpct') {
+        va = winPctFromRow(a);
+        vb = winPctFromRow(b);
+      } else {
+        const idx = key === 'elo' ? IDX.elo : IDX.matches;
+        va = cleanNum(a.children[idx]?.textContent);
+        vb = cleanNum(b.children[idx]?.textContent);
+      }
+      return current === 'asc' ? va - vb : vb - va;
+    });
+
+    rows.forEach(tr => tbody.appendChild(tr)); // reattach in order
+    renumberRanks();
+
+    // Update a11y + caret
+    btn.setAttribute('aria-sort', current === 'asc' ? 'ascending' : 'descending');
+    const caret = btn.querySelector('.caret');
+    if (caret) caret.textContent = current === 'asc' ? '↑' : '↓';
+  }
+
+  sortBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const key = btn.dataset.col; // "elo" | "winpct" | "matches"
+      sortBy(key);
+    });
+  });
+
+  // ----- SEARCH -----
+  // Build datalist from Player column if the search UI exists
+  function populateDatalistFromTable() {
+    if (!datalist || !tbody) return;
+    const names = Array.from(tbody.querySelectorAll('tr'))
+      .map(tr => (tr.children[IDX.name]?.textContent || '').trim())
+      .filter(Boolean);
+    const unique = Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
+    const frag = document.createDocumentFragment();
+    unique.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n;
+      frag.appendChild(opt);
+    });
+    datalist.innerHTML = '';
+    datalist.appendChild(frag);
+  }
+
+  function showAllRows() {
+    tbody.querySelectorAll('tr').forEach(tr => tr.style.display = '');
+    renumberRanks();
+  }
+
+  // Only filter when pressing Find or Enter (not on change)
+  function filterToName(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!q) { showAllRows(); return; }
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    let target = rows.find(tr =>
+      (tr.children[IDX.name]?.textContent || '').trim().toLowerCase() === q
+    );
+    if (!target) {
+      target = rows.find(tr =>
+        (tr.children[IDX.name]?.textContent || '').toLowerCase().includes(q)
+      );
+    }
+
+    rows.forEach(tr => tr.style.display = (tr === target) ? '' : 'none');
+    renumberRanks();
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Wire search (only on button click or Enter)
+  if (searchGo && searchInput) {
+    searchGo.addEventListener('click', () => filterToName(searchInput.value));
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); filterToName(searchInput.value); }
+    });
+  }
+  if (searchClear && searchInput) {
+    searchClear.addEventListener('click', () => { searchInput.value = ''; showAllRows(); });
+  }
+
+  // Init
+  populateDatalistFromTable();
+})();
+</script>
 </body>
 </html>
