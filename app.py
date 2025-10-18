@@ -198,5 +198,5 @@ def api_predict_series():
 if __name__ == "__main__":
     elo.reset_players()
     elo.load_csv_elo("Data/atp_tennis_clean.csv", K=32)
-    _safe_load_artifacts()  # <-- ADDED
+    _safe_load_artifacts()
     app.run(debug=True)
