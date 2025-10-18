@@ -54,17 +54,28 @@ def home():
 
 @app.route("/rankings")
 def rankings():
-    sort_key = request.args.get("sort") or "elo_desc"
+    elo_order = (request.args.get("elo_order") or "").strip()         
+    matches_order = (request.args.get("matches_order") or "").strip()  
+    query = (request.args.get("player") or "").strip()
 
     players = list(players_db.values())
 
-    def matches(p): return (p.wins or 0) + (p.losses or 0)
-    if sort_key == "elo_asc":
-        players.sort(key=lambda p: p.elo)
-    elif sort_key == "matches_desc":
-        players.sort(key=lambda p: matches(p), reverse=True)
-    else:
-        players.sort(key=lambda p: p.elo, reverse=True)
+    def matches(p): 
+        return (p.wins or 0) + (p.losses or 0)
+
+    def sort_key(p):
+        key = []
+        if matches_order:
+            m = matches(p)
+            key.append(m if matches_order == "asc" else -m)
+        if elo_order:
+            e = p.elo
+            key.append(e if elo_order == "asc" else -e)
+        if not key:
+            key.append(-p.elo)
+        return tuple(key)
+
+    players.sort(key=sort_key)
 
     ranked = []
     for i, p in enumerate(players, start=1):
@@ -77,7 +88,24 @@ def rankings():
             "matches": matches(p),
         })
 
-    return render_template("rankings.html", players=ranked, sort=sort_key)
+    if query:
+        exact = next((r for r in ranked if r["name"].lower() == query.lower()), None)
+        if exact:
+            ranked = [exact]
+        else:
+            partials = [r for r in ranked if query.lower() in r["name"].lower()]
+            ranked = partials[:1] if partials else []
+
+    players_all = sorted([p.name for p in players_db.values()], key=str.casefold)
+
+    return render_template(
+        "rankings.html",
+        players=ranked,
+        query=query,
+        players_all=players_all,
+        elo_order=elo_order,
+        matches_order=matches_order
+    )
 
 def all_player_names():
     return sorted([p.name for p in players_db.values()], key=str.casefold)
