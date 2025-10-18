@@ -23,7 +23,7 @@
   <main class="container center">
     <section class="hero">
       <h1 class="h1">Player Comparisons</h1>
-      <p class="muted">Choose two players and a period to compare Elo trends side-by-side.</p>
+      <p class="muted">Choose two players and a period to compare relevant stats</p>
     </section>
 
     <section class="card" aria-labelledby="select-heading">
@@ -56,99 +56,44 @@
       </form>
     </section>
 
-    <section class="grid two">
+    <section class="card">
       <div class="card" id="summary-card">
         <h2 class="h2">Summary</h2>
         <p id="current-elo"><strong>Current Elo:</strong> —</p>
         <p id="sample-size"><strong>Sample size:</strong> —</p>
       </div>
-      <div class="card chart-wrap">
-        <div style="width:100%;max-width:680px;">
-          <h2 class="h2">Elo Over Time</h2>
-          <canvas id="compChart" height="240" aria-label="Comparison Elo chart" role="img"></canvas>
-        </div>
-      </div>
     </section>
   </main>
 
-  <script>
-  let compChart = null;
-
+<script>
   function cutoffFromPeriod(period) {
     if (period === 'all') return null;
     const months = period === '24m' ? 24 : 60;
     const dt = new Date();
     dt.setMonth(dt.getMonth() - months);
-    return dt.toISOString().slice(0, 10); 
+    return dt.toISOString().slice(0, 10);
   }
 
   async function getHistory(player) {
     const res = await fetch(`/get_elo_history?player=${encodeURIComponent(player)}`);
     const data = await res.json();
     if (data.error) throw new Error(`${player}: ${data.error}`);
-    return data; 
+    return data;
   }
 
   function makeSeries(dates, points) {
     const series = [];
     let lastElo = null;
-
     for (const d of dates) {
       const item = points.find(p => p.date === d);
       if (item) {
         lastElo = item.elo;
         series.push(item.elo);
       } else {
-        // Keep last Elo value if no match that day
         series.push(lastElo);
       }
     }
-
     return series;
-  }
-
-  // Step-like Elo chart (flat between games)
-  function drawChart(labels, s1, s2, p1, p2) {
-    const ctx = document.getElementById('compChart').getContext('2d');
-    if (compChart) compChart.destroy();
-    compChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          { 
-            label: `${p1} Elo`, 
-            data: s1,
-            borderWidth: 2,
-            borderColor: '#2ecc71',       // Emerald Green
-            backgroundColor: 'rgba(46, 204, 113, 0.1)',
-            stepped: true,
-            tension: 0,
-            fill: false
-          },
-          { 
-            label: `${p2} Elo`, 
-            data: s2,
-            borderWidth: 2,
-            borderColor: '#555555',       // Charcoal Gray
-            backgroundColor: 'rgba(85, 85, 85, 0.1)',
-            stepped: true,
-            tension: 0,
-            fill: false
-          }
-        ]
-      },
-      options: {
-        interaction: { mode: 'nearest', intersect: false },
-        scales: {
-          y: { title: { display: true, text: 'Elo Rating' } },
-          x: { title: { display: true, text: 'Date' } }
-        },
-        plugins: {
-          legend: { position: 'bottom' }
-        }
-      }
-    });
   }
 
   document.getElementById('compare-form').addEventListener('submit', async (e) => {
@@ -157,7 +102,6 @@
     const p1 = document.querySelector('input[name="p1"]').value.trim();
     const p2 = document.querySelector('input[name="p2"]').value.trim();
     const period = document.querySelector('select[name="period"]').value;
-
     if (!p1 || !p2) {
       alert('Select both players');
       return;
@@ -171,7 +115,6 @@
       const f2 = cutoff ? d2.filter(pt => pt.date >= cutoff) : d2;
 
       const dates = Array.from(new Set([...f1.map(x => x.date), ...f2.map(x => x.date)])).sort();
-
       const s1 = makeSeries(dates, f1);
       const s2 = makeSeries(dates, f2);
 
@@ -182,13 +125,12 @@
       document.getElementById('sample-size').innerHTML =
         `<strong>Sample size:</strong> ${s1.filter(v => v != null).length} vs ${s2.filter(v => v != null).length}`;
 
-      drawChart(dates, s1, s2, p1, p2);
-
+      // chart removed — nothing else to do
     } catch (err) {
       console.error(err);
       alert(err.message || 'Failed to load player histories');
     }
   });
-  </script>
+</script>
 </body>
 </html>
