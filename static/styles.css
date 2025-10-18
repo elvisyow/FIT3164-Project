@@ -81,6 +81,20 @@ body{
   margin-bottom:20px;
 }
 
+.card[aria-labelledby="winprob-now-heading"] {
+  min-height: 120px;              /* shorter height */
+  max-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;    /* keeps heading at the top */
+  align-items: center;            /* centers inner content horizontally */
+  padding-top: 12px;              /* small breathing room */
+}
+
+.card[aria-labelledby="winprob-now-heading"] .prob {
+  margin-top: 0.5rem !important;  /* tighter spacing below heading */
+  gap: 4rem;
+}
 /* ================================
    Grid helpers
    ================================ */
