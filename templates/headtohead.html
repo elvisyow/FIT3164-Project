@@ -57,7 +57,7 @@
       </div>
     </section>
 
-    <!--Win Probability -->
+    <!-- Win Probability -->
     <section class="card" aria-labelledby="winprob-now-heading">
       <h2 id="winprob-now-heading" class="h2">Win Probability (Current Match)</h2>
 
@@ -89,7 +89,7 @@ let eloChart = null;
 let timelineData1 = [];
 let timelineData2 = [];
 let allDates = [];
-let probOverTimeChart = null; // NEW
+let probOverTimeChart = null;
 
 document.getElementById("load-btn").addEventListener("click", async () => {
   const player1 = document.querySelector('input[name="p1"]').value;
@@ -111,7 +111,6 @@ document.getElementById("load-btn").addEventListener("click", async () => {
   allDates.sort();
 
   updateChart(100);
-
   predictAndRender(player1, player2);
   updateProbOverTimeModel(100);  
 });
@@ -224,47 +223,37 @@ async function predictAndRender(p1, p2) {
 async function updateProbOverTimeModel(percent) {
   if (!timelineData1.length || !timelineData2.length) return;
 
-  // Visible window (same as Elo chart)
   const count = Math.floor(allDates.length * percent / 100);
   const visibleDates = count > 0 ? allDates.slice(-count) : [];
   if (!visibleDates.length) return;
 
-  // Carry-forward Elos, build all points first
   let lastA = null, lastB = null;
-  const allPoints = [];  // [{date, elo_diff, surface, round}]
+  const allPoints = [];
   for (const d of visibleDates) {
     const a = timelineData1.find(p => p.date === d);
     const b = timelineData2.find(p => p.date === d);
-
     if (a && a.elo != null) lastA = Number(a.elo);
     if (b && b.elo != null) lastB = Number(b.elo);
-
     if (lastA != null && lastB != null) {
-      allPoints.push({
-        date: d,
-        elo_diff: lastA - lastB,
-        surface: "",   // wire these when you add controls
-        round: ""
-      });
+      allPoints.push({ date: d, elo_diff: lastA - lastB, surface: "", round: "" });
     }
   }
+
   if (!allPoints.length) {
     if (probOverTimeChart) { probOverTimeChart.destroy(); probOverTimeChart = null; }
     return;
   }
 
-  // Keep only ONE point per year: the last available in that year
-  const byYear = new Map(); // year -> point
+  const byYear = new Map();
   for (const pt of allPoints) {
     const yr = new Date(pt.date).getFullYear();
-    byYear.set(yr, pt); // later dates overwrite earlier ones => "last in year"
+    byYear.set(yr, pt);
   }
-  // Sort by year ascending
+
   const years = Array.from(byYear.keys()).sort((a,b)=>a-b);
   const points = years.map(y => byYear.get(y));
   if (!points.length) return;
 
-  // Ask the model for probabilities for those yearly points
   const res = await fetch("/api/predict_series", {
     method: "POST",
     headers: { "Content-Type":"application/json" },
@@ -279,8 +268,7 @@ async function updateProbOverTimeModel(percent) {
   const probs = Array.isArray(payload.probs) ? payload.probs : [];
   if (!probs.length) return;
 
-  // Chart data: show as % and label x-axis with the year
-  const labels   = years.map(String); // ["2016","2017",...]
+  const labels = years.map(String);
   const p1Series = probs.map(p => +(p * 100).toFixed(2));
   const p2Series = p1Series.map(v => +(100 - v).toFixed(2));
 
@@ -291,8 +279,22 @@ async function updateProbOverTimeModel(percent) {
     data: {
       labels,
       datasets: [
-        { label: document.querySelector('input[name="p1"]').value + " Win %", data: p1Series, tension: 0.2 },
-        { label: document.querySelector('input[name="p2"]').value + " Win %", data: p2Series, tension: 0.2 }
+        { 
+          label: document.querySelector('input[name="p1"]').value + " Win %", 
+          data: p1Series, 
+          borderColor: '#2ecc71', 
+          backgroundColor: 'rgba(46, 204, 113, 0.1)', 
+          tension: 0.2,
+          fill: true
+        },
+        { 
+          label: document.querySelector('input[name="p2"]').value + " Win %", 
+          data: p2Series, 
+          borderColor: '#555555', 
+          backgroundColor: 'rgba(85, 85, 85, 0.1)', 
+          tension: 0.2,
+          fill: true
+        }
       ]
     },
     options: {
