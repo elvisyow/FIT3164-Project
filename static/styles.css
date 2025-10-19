@@ -180,7 +180,11 @@ body{
 /* ================================
    Charts
    ================================ */
-.chart-wrap{ display:flex; justify-content:center; align-items:center; min-height:320px }
+.card.chart-wrap{ display:block; }
+.chart-wrap .h2{
+  text-align:center;
+  margin:0 0 8px;
+}
 canvas{ max-width:100%; height:auto }
 
 /* ================================
