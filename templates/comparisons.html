@@ -16,121 +16,232 @@
     <nav class="nav" aria-label="Primary">
       <a href="{{ url_for('rankings') }}">Rankings</a>
       <a href="{{ url_for('headtohead') }}">Head-to-Head</a>
-      <a href="{{ url_for('comparisons') }}">Comparisons</a>
+      <a href="{{ url_for('comparisons') }}" aria-current="page">Comparisons</a>
     </nav>
   </header>
 
   <main class="container center">
+    <!-- Hero -->
     <section class="hero">
-      <h1 class="h1">Player Comparisons</h1>
-      <p class="muted">Choose two players and a period to compare relevant stats</p>
+      <h1 class="h1">Compare Elo Trends</h1>
+      <p class="muted">Select up to five players and explore their Elo over time. Use the slider to focus on a specific period.</p>
     </section>
 
+    <!-- Player selectors -->
     <section class="card" aria-labelledby="select-heading">
-      <h2 id="select-heading" class="h2">Select Players</h2>
-
-      <form class="filters" id="compare-form">
+      <h2 id="select-heading" class="h2">Select Players (up to 5)</h2>
+      <form class="filters" id="compare-form" onsubmit="return false;">
         <label>Player 1
-          <input name="p1" list="players" placeholder="e.g., NadalR" autocomplete="off" />
+          <input name="p1" list="players" placeholder="e.g., Novak Djokovic" autocomplete="off" />
         </label>
-
         <label>Player 2
-          <input name="p2" list="players" placeholder="e.g., NovakJ" autocomplete="off" />
+          <input name="p2" list="players" placeholder="e.g., Rafael Nadal" autocomplete="off" />
+        </label>
+        <label>Player 3
+          <input name="p3" list="players" placeholder="optional" autocomplete="off" />
+        </label>
+        <label>Player 4
+          <input name="p4" list="players" placeholder="optional" autocomplete="off" />
+        </label>
+        <label>Player 5
+          <input name="p5" list="players" placeholder="optional" autocomplete="off" />
         </label>
 
-        <label>Period
-          <select name="period">
-            <option value="24m">Last 24 months</option>
-            <option value="60m">Last 60 months</option>
-            <option value="all">All-time</option>
-          </select>
-        </label>
-
+        <!-- Reuse datalist you already pass from Flask -->
         <datalist id="players">
           {% for name in players %}
             <option value="{{ name }}"></option>
           {% endfor %}
         </datalist>
 
-        <button class="btn" type="submit">Compare</button>
+        <button class="btn" id="plot-btn" type="button">Plot Trends</button>
+        <button class="btn" id="clear-btn" type="button" style="background:#ccc; color:#000;">Clear</button>
       </form>
+
+      <!-- Timeline slider -->
+      <div style="margin-top:1rem; max-width:360px; margin-inline:auto; text-align:center;">
+        <label for="time-slider" style="display:block; margin-bottom:.35rem;">Timeline Range</label>
+        <input type="range" id="time-slider" min="0" max="100" value="100" style="width:100%;">
+        <div class="muted" id="slider-label" style="margin-top:.25rem;">Showing 100% of timeline</div>
+      </div>
     </section>
 
-    <section class="card">
-      <div class="card" id="summary-card">
-        <h2 class="h2">Summary</h2>
-        <p id="current-elo"><strong>Current Elo:</strong> —</p>
-        <p id="sample-size"><strong>Sample size:</strong> —</p>
-      </div>
+    <!-- Chart -->
+    <section class="card chart-wrap" aria-labelledby="chart-heading">
+      <h2 id="chart-heading" class="h2">Elo Over Time</h2>
+      <canvas id="compChart" height="280" aria-label="Comparison Elo chart" role="img"></canvas>
+      <p class="muted" id="summary" style="margin-top:.75rem;"></p>
     </section>
   </main>
 
 <script>
-  function cutoffFromPeriod(period) {
-    if (period === 'all') return null;
-    const months = period === '24m' ? 24 : 60;
-    const dt = new Date();
-    dt.setMonth(dt.getMonth() - months);
-    return dt.toISOString().slice(0, 10);
-  }
+let compChart = null;
+let seriesStore = [];   // [{ name, points:[{date, elo}, ...] }, ...]
+let allDates = [];      // union of dates across selected players (sorted)
 
-  async function getHistory(player) {
-    const res = await fetch(`/get_elo_history?player=${encodeURIComponent(player)}`);
-    const data = await res.json();
-    if (data.error) throw new Error(`${player}: ${data.error}`);
-    return data;
-  }
+// -------- Helpers --------
+async function getHistory(player) {
+  const res = await fetch(`/get_elo_history?player=${encodeURIComponent(player)}`);
+  const data = await res.json();
+  if (data.error) throw new Error(`${player}: ${data.error}`);
+  return data;
+}
 
-  function makeSeries(dates, points) {
-    const series = [];
-    let lastElo = null;
-    for (const d of dates) {
-      const item = points.find(p => p.date === d);
-      if (item) {
-        lastElo = item.elo;
-        series.push(item.elo);
-      } else {
-        series.push(lastElo);
+function makeSeriesForDates(dates, points) {
+  let last = null;
+  const map = new Map(points.map(p => [p.date, p.elo]));
+  return dates.map(d => {
+    if (map.has(d)) last = map.get(d);
+    return last;
+  });
+}
+
+function visibleDatesByPercent(percent) {
+  if (!allDates.length) return [];
+  const count = Math.max(1, Math.floor(allDates.length * (percent / 100)));
+  return allDates.slice(-count);
+}
+
+function buildAllDates() {
+  const set = new Set();
+  for (const s of seriesStore) for (const p of s.points) set.add(p.date);
+  allDates = Array.from(set).sort();
+}
+
+function drawChart(visibleDates) {
+  const ctx = document.getElementById('compChart').getContext('2d');
+  if (compChart) compChart.destroy();
+
+  const datasets = seriesStore.map(s => ({
+    label: s.name,
+    data: makeSeriesForDates(visibleDates, s.points),
+    tension: 0.2,
+    spanGaps: true
+  }));
+
+  compChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: visibleDates, datasets },
+    options: {
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: c => c.parsed.y != null ? `${c.dataset.label}: ${c.parsed.y}` : null } }
+      },
+      scales: {
+        y: { title: { display: true, text: 'Elo Rating' } },
+        x: { title: { display: true, text: 'Date' } }
       }
     }
-    return series;
+  });
+}
+
+function updateSummary(visibleDates) {
+  const el = document.getElementById('summary');
+  if (!el) return;
+  if (!seriesStore.length || !visibleDates.length) { el.textContent = ''; return; }
+
+  const bits = seriesStore.map(s => {
+    const vis = s.points.filter(p => p.date >= visibleDates[0] && p.date <= visibleDates[visibleDates.length - 1]);
+    const curr = vis.length ? vis[vis.length - 1].elo : null;
+    return `${s.name}: ${curr != null ? Math.round(curr) : '—'}`;
+  });
+  el.textContent = `Latest Elo in view — ${bits.join('  •  ')}`;
+}
+
+function setSliderLabel(percent) {
+  const el = document.getElementById('slider-label');
+  if (el) el.textContent = `Showing ${percent}% of timeline`;
+}
+
+// -------- Main flow --------
+async function plotFromInputs() {
+  const names = ['p1','p2','p3','p4','p5']
+    .map(n => document.querySelector(`input[name="${n}"]`)?.value.trim())
+    .filter(Boolean);
+
+  const uniq = [];
+  const seen = new Set();
+  for (const n of names) {
+    const k = n.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); uniq.push(n); }
   }
 
-  document.getElementById('compare-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  if (uniq.length < 2) { alert('Please enter at least 2 players (up to 5).'); return; }
+  if (uniq.length > 5) { alert('Max 5 players.'); return; }
 
-    const p1 = document.querySelector('input[name="p1"]').value.trim();
-    const p2 = document.querySelector('input[name="p2"]').value.trim();
-    const period = document.querySelector('select[name="period"]').value;
-    if (!p1 || !p2) {
-      alert('Select both players');
-      return;
-    }
+  try {
+    const histories = await Promise.all(uniq.map(n => getHistory(n)));
+    seriesStore = uniq.map((name, i) => ({ name, points: histories[i] || [] }));
+    buildAllDates();
 
-    try {
-      const [d1, d2] = await Promise.all([getHistory(p1), getHistory(p2)]);
+    const percent = Number(document.getElementById('time-slider').value || 100);
+    const visDates = visibleDatesByPercent(percent);
+    drawChart(visDates);
+    updateSummary(visDates);
+    setSliderLabel(percent);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Failed to load player histories');
+  }
+}
 
-      const cutoff = cutoffFromPeriod(period);
-      const f1 = cutoff ? d1.filter(pt => pt.date >= cutoff) : d1;
-      const f2 = cutoff ? d2.filter(pt => pt.date >= cutoff) : d2;
+// -------- Clear Function --------
+function clearComparisons() {
+  // Reset stored data
+  seriesStore = [];
+  allDates = [];
 
-      const dates = Array.from(new Set([...f1.map(x => x.date), ...f2.map(x => x.date)])).sort();
-      const s1 = makeSeries(dates, f1);
-      const s2 = makeSeries(dates, f2);
+  // Clear all input fields
+  ['p1','p2','p3','p4','p5'].forEach(n => {
+    const input = document.querySelector(`input[name="${n}"]`);
+    if (input) input.value = '';
+  });
 
-      const curr1 = f1.length ? f1[f1.length - 1].elo : '—';
-      const curr2 = f2.length ? f2[f2.length - 1].elo : '—';
-      document.getElementById('current-elo').innerHTML =
-        `<strong>Current Elo:</strong> ${p1} ${curr1} &nbsp;|&nbsp; ${p2} ${curr2}`;
-      document.getElementById('sample-size').innerHTML =
-        `<strong>Sample size:</strong> ${s1.filter(v => v != null).length} vs ${s2.filter(v => v != null).length}`;
+  // Reset slider
+  const slider = document.getElementById('time-slider');
+  if (slider) {
+    slider.value = 100;
+    setSliderLabel(100);
+  }
 
-      // chart removed — nothing else to do
-    } catch (err) {
-      console.error(err);
-      alert(err.message || 'Failed to load player histories');
+  // Destroy chart if present
+  if (compChart) {
+    compChart.destroy();
+    compChart = null;
+  }
+
+  // Clear summary text
+  const summary = document.getElementById('summary');
+  if (summary) summary.textContent = '';
+}
+
+// -------- Event Listeners --------
+document.getElementById('plot-btn')?.addEventListener('click', plotFromInputs);
+document.getElementById('clear-btn')?.addEventListener('click', clearComparisons);
+
+document.getElementById('time-slider')?.addEventListener('input', (e) => {
+  const percent = Number(e.target.value);
+  if (!allDates.length || !seriesStore.length) { setSliderLabel(percent); return; }
+  const visDates = visibleDatesByPercent(percent);
+  drawChart(visDates);
+  updateSummary(visDates);
+  setSliderLabel(percent);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const qs = new URLSearchParams(location.search);
+  const keys = ['p1','p2','p3','p4','p5'];
+  let filled = 0;
+  keys.forEach(k => {
+    const v = qs.get(k);
+    if (v) {
+      const input = document.querySelector(`input[name="${k}"]`);
+      if (input) { input.value = v; filled++; }
     }
   });
+  if (filled >= 2) plotFromInputs();
+});
 </script>
 </body>
 </html>
