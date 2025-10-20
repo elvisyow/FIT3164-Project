@@ -21,13 +21,11 @@
   </header>
 
   <main class="container center">
-    <!-- Hero -->
     <section class="hero">
       <h1 class="h1">Compare Elo Trends</h1>
       <p class="muted">Select up to five players and explore their Elo over time. Use the slider to focus on a specific period.</p>
     </section>
 
-    <!-- Player selectors -->
     <section class="card" aria-labelledby="select-heading">
       <h2 id="select-heading" class="h2">Select Players (up to 5)</h2>
       <form class="filters" id="compare-form" onsubmit="return false;">
@@ -47,7 +45,6 @@
           <input name="p5" list="players" placeholder="e.g. Murray A." autocomplete="off" />
         </label>
 
-        <!-- Reuse datalist you already pass from Flask -->
         <datalist id="players">
           {% for name in players %}
             <option value="{{ name }}"></option>
@@ -58,14 +55,12 @@
         <button class="btn" id="clear-btn" type="button" style="background:#ccc; color:#000;">Clear</button>
       </form>
 
-      <!-- Timeline slider -->
       <div style="margin-top:1rem; max-width:360px; margin-inline:auto; text-align:center;">
         <label for="time-slider" style="display:block; margin-bottom:.35rem;">Timeline Range</label>
         <input type="range" id="time-slider" min="0" max="100" value="100" style="width:100%;">
       </div>
     </section>
 
-    <!-- Chart -->
     <section class="card chart-wrap" aria-labelledby="chart-heading">
       <h2 id="chart-heading" class="h2">Elo Over Time</h2>
       <canvas id="compChart" height="280" aria-label="Comparison Elo chart" role="img"></canvas>
@@ -75,8 +70,8 @@
 
 <script>
 let compChart = null;
-let seriesStore = [];   // [{ name, points:[{date, elo}, ...] }, ...]
-let allDates = [];      // union of dates across selected players (sorted)
+let seriesStore = [];
+let allDates = [];
 
 // -------- Helpers --------
 async function getHistory(player) {
@@ -111,12 +106,27 @@ function drawChart(visibleDates) {
   const ctx = document.getElementById('compChart').getContext('2d');
   if (compChart) compChart.destroy();
 
-  const datasets = seriesStore.map(s => ({
-    label: s.name,
-    data: makeSeriesForDates(visibleDates, s.points),
-    tension: 0.2,
-    spanGaps: true
-  }));
+  const colors = [
+  { borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)' },  // Red
+  { borderColor: '#1e90ff', backgroundColor: 'rgba(30, 144, 255, 0.1)' }, // Blue
+  { borderColor: '#2ecc71', backgroundColor: 'rgba(46, 204, 113, 0.1)' }, // Lime green
+  { borderColor: '#f1c40f', backgroundColor: 'rgba(241, 196, 15, 0.1)' }, // Yellow
+  { borderColor: '#a8a8ad', backgroundColor: 'rgba(168, 168, 173, 0.2)' } // Neutral grey
+];
+
+
+  const datasets = seriesStore.map((s, i) => {
+    const c = colors[i % colors.length];
+    return {
+      label: s.name,
+      data: makeSeriesForDates(visibleDates, s.points),
+      tension: 0.2,
+      spanGaps: true,
+      borderColor: c.borderColor,
+      backgroundColor: c.backgroundColor,
+      borderWidth: 2
+    };
+  });
 
   compChart = new Chart(ctx, {
     type: 'line',
@@ -185,37 +195,30 @@ async function plotFromInputs() {
   }
 }
 
-// -------- Clear Function --------
 function clearComparisons() {
-  // Reset stored data
   seriesStore = [];
   allDates = [];
 
-  // Clear all input fields
   ['p1','p2','p3','p4','p5'].forEach(n => {
     const input = document.querySelector(`input[name="${n}"]`);
     if (input) input.value = '';
   });
 
-  // Reset slider
   const slider = document.getElementById('time-slider');
   if (slider) {
     slider.value = 100;
     setSliderLabel(100);
   }
 
-  // Destroy chart if present
   if (compChart) {
     compChart.destroy();
     compChart = null;
   }
 
-  // Clear summary text
   const summary = document.getElementById('summary');
   if (summary) summary.textContent = '';
 }
 
-// -------- Event Listeners --------
 document.getElementById('plot-btn')?.addEventListener('click', plotFromInputs);
 document.getElementById('clear-btn')?.addEventListener('click', clearComparisons);
 
