@@ -42,6 +42,7 @@ def find_col(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
                 return c
     return None
 
+# Calculate the expected score (win probability) of player A against player B
 def expected_score(r_a: float, r_b: float, scale: float = ELO_SCALE) -> float:
     return 1.0 / (1.0 + 10.0 ** ((r_b - r_a) / scale))
 
@@ -212,7 +213,7 @@ X_tr, X_te, y_tr, y_te = train_test_split(
 )
 
 
-# Small MultiLayer Perceptron Classifier (neural net)
+# Small Multi-Layer Perceptron (MLP) classifier for match outcome prediction
 mlp = Pipeline([
     ("prep", preprocess),
     ("clf", MLPClassifier(hidden_layer_sizes=(32, 16),
@@ -221,6 +222,8 @@ mlp = Pipeline([
                           random_state=42))
 ])
 mlp.fit(X_tr, y_tr)
+
+
 proba_mlp = mlp.predict_proba(X_te)[:, 1]
 pred_mlp = (proba_mlp >= 0.5).astype(int)
 

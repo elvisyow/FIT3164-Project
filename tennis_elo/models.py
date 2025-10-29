@@ -21,7 +21,9 @@ class Player:
     losses: int = 0
     history: List[RatingEvent] = field(default_factory=list)
 
+# A dictionary where each key is a player's name (string)
 Players = Dict[str, Player]
+# Initialize the global player database (hashmap).
 players_db: Players = {}
 
 def reset_players() -> None:
