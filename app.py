@@ -110,27 +110,41 @@ def rankings():
 def all_player_names():
     return sorted([p.name for p in players_db.values()], key=str.casefold)
 
-@app.route("/headtohead")
-def headtohead():
-    names = [p.name for p in players_db.values()]
-    names.sort()
-    return render_template("headtohead.html", players=names)
-
+# Route: /comparisons
 @app.route("/comparisons")
 def comparisons():
+    # Retrieve all player names from the players_db dictionary
     names = [p.name for p in players_db.values()]
+    # Sort names alphabetically for dropdown or selection menus
     names.sort()
+    # Render the player comparisons page, passing player names to the template
     return render_template("comparisons.html", players=names)
 
+# Route: /headtohead
+@app.route("/headtohead")
+def headtohead():
+    # Retrieve all player names from the players_db dictionary
+    names = [p.name for p in players_db.values()]
+    # Sort names alphabetically for easier selection in the UI
+    names.sort()
+    # Render the head-to-head comparison page with the sorted player names
+    return render_template("headtohead.html", players=names)
+
+# Route: /get_elo_history
 @app.route("/get_elo_history")
 def player_timeline():
+    # Get the player's name from the request query string (?player=<name>)
     player_name = request.args.get("player")
+    # If no player name is provided, return an error message
     if not player_name:
         return jsonify({"error": "Player name must be provided"}), 400
     try:
+        # Retrieve the player's Elo rating history as a dictionary
         timeline = elo.export_player_elo_history_to_dict(player_name)
     except Exception:
+        # Return a 404 error if the player does not exist in the database
         return jsonify({"error": "Player not found"}), 404
+    # Return the player's Elo timeline as JSON for front-end visualization
     return jsonify(timeline)
 
 # --- ADDED: prediction API for the H2H page ---
